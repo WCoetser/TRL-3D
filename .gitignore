@@ -3,3 +3,8 @@ Trl-3D.OpenGL/obj/
 Trl-3D.Core/bin/
 Trl-3D.Core/obj/
 .vscode/
+.vs/
+Trl-3D.OpenTk/bin/
+Trl-3D.OpenTk/obj/
+Trl-3D.SampleApp/bin/
+Trl-3D.SampleApp/obj/
