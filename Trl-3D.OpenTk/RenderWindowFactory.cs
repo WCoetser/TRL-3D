@@ -11,6 +11,7 @@ namespace Trl_3D.OpenTk
         public static IRenderWindow Create(IServiceProvider serviceProvider)
         {
             var logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
+            var loader = serviceProvider.GetRequiredService<ISceneLoader>();
 
             var settings = new GameWindowSettings
             {
@@ -20,12 +21,12 @@ namespace Trl_3D.OpenTk
             var nativeWindowSettings = new NativeWindowSettings
             {
                 Title = "Trl-3D",
-                APIVersion = new Version(4, 5), // OpenGL 4.4, June 2014
+                APIVersion = new Version(4, 5),
                 API = OpenTK.Windowing.Common.ContextAPI.OpenGL
             };
             
             var renderWindow = new RenderWindow(settings, nativeWindowSettings);
-            renderWindow.SetLogger(logger);
+            renderWindow.Initialize(logger, loader);
 
             return renderWindow;
         }

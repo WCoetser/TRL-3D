@@ -5,6 +5,8 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using System.Collections.Generic;
+using Trl_3D.Core;
 using Trl_3D.Core.Abstractions;
 
 namespace Trl_3D.OpenTk
@@ -15,6 +17,9 @@ namespace Trl_3D.OpenTk
     public class RenderWindow : GameWindow, IRenderWindow
     {
         private ILogger _logger;
+        private ISceneLoader _loader;
+        private OpenGLSceneProcessor _openGLSceneProcessor;
+
 
         int _program;
         private int _vertexArray;
@@ -54,6 +59,8 @@ void main(void)
             Resize += MainWindowResize;
             RenderFrame += MainWindowRenderFrame;
             UpdateFrame += MainWindowUpdateFrame;
+
+            _openGLSceneProcessor = new OpenGLSceneProcessor();            
         }
 
         private int CompileShaders()
@@ -104,14 +111,7 @@ void main(void)
         {
             _time += e.Time;
 
-            Color4 backColor;
-            backColor.A = 1.0f;
-            backColor.R = 0.1f;
-            backColor.G = 0.1f;
-            backColor.B = 0.3f;
-            GL.ClearColor(backColor);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
+            _openGLSceneProcessor.Render();
 
             // Render point
             GL.UseProgram(_program);
@@ -143,22 +143,30 @@ void main(void)
 
             GL.DeleteVertexArrays(1, ref _vertexArray);
             GL.DeleteProgram(_program);
+
+            _logger.LogInformation("RenderWindow Closed complete");
         }
 
         private void MainWindowLoad()
         {
             _logger.LogInformation($"Open GL version: {GL.GetString(StringName.Version)}");
+            IEnumerable<Core.Abstractions.IAssertion> assertions = _loader.LoadInitialScene();
+            _openGLSceneProcessor.SetState(assertions);
+
             _program = CompileShaders();
 
             GL.GenVertexArrays(1, out _vertexArray);
             GL.BindVertexArray(_vertexArray);
 
             Closed += MainWindowClosed;
+
+            _logger.LogInformation("RenderWindow Load complete");
         }
 
-        public void SetLogger(ILogger logger)
+        public void Initialize(ILogger logger, ISceneLoader loader)
         {
             _logger = logger;
+            _loader = loader;
         }
     }
 }
