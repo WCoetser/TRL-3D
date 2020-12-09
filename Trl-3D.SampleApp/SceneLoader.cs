@@ -19,7 +19,7 @@ namespace Trl_3D.SampleApp
         {
             return new IAssertion[]
             {
-                new ClearColor(0.0f, 0.2f, 0.2f)
+                new ClearColor(0.1f, 0.1f, 0.2f)
             };
         }
     }
