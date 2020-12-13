@@ -69,6 +69,7 @@ namespace Trl_3D.SampleApp
             services.AddOpenTk();
             services.AddLogging(config => config.AddConsole());
             services.AddSingleton<ISceneLoader, SceneLoader>();
+            services.AddSingleton<IEventProcessor, EventProcessor>();
         }
     }
 }
