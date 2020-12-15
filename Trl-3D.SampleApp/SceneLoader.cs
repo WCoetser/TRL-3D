@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -31,26 +32,26 @@ namespace Trl_3D.SampleApp
                     {
                         var filename = $"capture.png";
 
-                        _logger.LogInformation($"time = {renderInfo.TotalRenderTime}");
-                        _logger.LogInformation($"buffer length = {buffer.Length}");
-
                         var fileInfo = new FileInfo(filename);
                         if (fileInfo.Exists)
                         {
                             fileInfo.Delete();
                         }
 
-                        using (Bitmap bmp = new Bitmap(renderInfo.Width, renderInfo.Height, PixelFormat.Format24bppRgb))
+                        using (Bitmap bmp = new Bitmap(renderInfo.Width, renderInfo.Height))
                         {
                             for (int x = 0; x < renderInfo.Width; x++)
                             {
                                 for (int y = 0; y < renderInfo.Height; y++)
                                 {
-                                    var bufferAddress = y * renderInfo.Width + x;
+                                    var bufferAddress = (y * renderInfo.Width + x) * 3;
                                     byte red = buffer[bufferAddress];
                                     byte green = buffer[bufferAddress + 1];
                                     byte blue = buffer[bufferAddress + 2];
-                                    bmp.SetPixel(x, y, Color.FromArgb(red, green, blue));
+                                    
+                                    var y_inverted = (renderInfo.Height - 1) - y;
+
+                                    bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
                                 }
                             }
 

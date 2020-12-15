@@ -35,18 +35,6 @@ namespace Trl_3D.OpenTk
 
         public void SetState(IEnumerable<IAssertion> scene)
         {
-            //// See  https://stackoverflow.com/questions/47059154/opengl-render-to-framebuffer-as-well-as-to-display
-            //offscreenBuffer = GL.GenFramebuffer();
-
-            //var buffStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
-            //if (buffStatus != FramebufferErrorCode.FramebufferComplete)
-            //{
-            //    _logger.LogError("TODO: Wait for frame buffer ...");
-            //}
-
-            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, offscreenBuffer);
-
-
             foreach (var assertion in scene)
             {
                 _logger.LogInformation($"Generate state: {assertion.GetType().FullName}");
@@ -92,14 +80,7 @@ namespace Trl_3D.OpenTk
 
         public void Render(double timeSinceLastFrame)
         {
-            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, offscreenBuffer);
 
-            //foreach (var assertion in _assertionListRenderOrder)
-            //{
-            //    assertion.Render();
-            //}
-
-            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
             if (!_assertionListRenderOrder.Any())
             {

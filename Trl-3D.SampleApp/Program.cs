@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using System;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.OpenTk;
@@ -9,8 +10,8 @@ namespace Trl_3D.SampleApp
 {
     class Program
     {
-        private static IServiceProvider serviceProvider = null;
-        
+        private static IServiceProvider serviceProvider;
+
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
@@ -20,12 +21,11 @@ namespace Trl_3D.SampleApp
                     .ConfigureServices(ConfigureServices)
                     .Build();
 
-                using (var serviceScope = host.Services.CreateScope())
-                {
-                    serviceProvider = serviceScope.ServiceProvider;
-                    var renderWindow = serviceProvider.GetRequiredService<IRenderWindow>();
-                    renderWindow.Run();
-                }
+                using var serviceScope = host.Services.CreateScope();
+
+                serviceProvider = serviceScope.ServiceProvider;
+                var renderWindow = serviceProvider.GetRequiredService<IRenderWindow>();
+                renderWindow.Run();
             }
             finally
             {
@@ -35,7 +35,7 @@ namespace Trl_3D.SampleApp
 
         private static void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
         {
-            Action<Exception> dumpError = delegate (Exception ex)
+            static void dumpError(Exception ex)
             {
                 string err = $"Error: {ex.Message}{Environment.NewLine}{ex.StackTrace}";
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -43,7 +43,7 @@ namespace Trl_3D.SampleApp
                 Console.ResetColor();
 
                 System.Diagnostics.Trace.WriteLine(err);
-            };
+            }
 
             try
             {
@@ -64,9 +64,16 @@ namespace Trl_3D.SampleApp
         }
 
         public static void ConfigureServices(IServiceCollection services)
-        {
+        {            
+            var logger = new LoggerConfiguration()
+                              .WriteTo.Console(Serilog.Events.LogEventLevel.Verbose)
+                              .CreateLogger();
+
             services.AddOpenTk();
-            services.AddLogging(config => config.AddConsole());
+            services.AddLogging(builder => {
+                builder.ClearProviders();
+                builder.AddSerilog(logger);
+            });
             services.AddSingleton<ISceneLoader, SceneLoader>();
             services.AddSingleton<IEventProcessor, EventProcessor>();
         }
