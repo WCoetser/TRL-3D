@@ -4,6 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Trl_3D.Core.Assertions
 {
+    /// <summary>
+    /// Tutorial References:
+    /// https://dreamstatecoding.blogspot.com/p/opengl4-with-opentk-tutorials.html
+    /// https://learnopengl.com/Getting-started/Hello-Triangle
+    /// </summary>
     public class RenderTestTriagle : IAssertion
     {
         public RenderProcessStep ProcessStep => RenderProcessStep.Middle;
