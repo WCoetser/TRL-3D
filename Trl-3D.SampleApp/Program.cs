@@ -68,14 +68,13 @@ namespace Trl_3D.SampleApp
             var logger = new LoggerConfiguration()
                               .WriteTo.Console(Serilog.Events.LogEventLevel.Verbose)
                               .CreateLogger();
-
-            services.AddOpenTk();
             services.AddLogging(builder => {
                 builder.ClearProviders();
                 builder.AddSerilog(logger);
             });
+
+            services.AddOpenTk();
             services.AddSingleton<ISceneLoader, SceneLoader>();
-            services.AddSingleton<IEventProcessor, EventProcessor>();
         }
     }
 }
