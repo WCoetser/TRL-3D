@@ -28,7 +28,7 @@ namespace Trl_3D.OpenTk.Assertions
 
             byte[] backBufferDump = new byte[renderInfo.Width * renderInfo.Height * 3];
             GL.ReadBuffer(ReadBufferMode.Back);
-            GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.Byte, backBufferDump);
+            GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.UnsignedByte, backBufferDump);
 
             CaptureCallback(backBufferDump, renderInfo.Clone());
         }
