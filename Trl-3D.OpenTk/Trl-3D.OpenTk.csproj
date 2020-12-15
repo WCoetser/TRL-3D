@@ -13,5 +13,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Trl-3D.Core\Trl-3D.Core.csproj" />
   </ItemGroup>
+  
+  <PropertyGroup>
+  <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+</PropertyGroup>
+
 
 </Project>

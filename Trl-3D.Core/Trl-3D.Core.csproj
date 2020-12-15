@@ -6,9 +6,13 @@
     <RootNamespace>Trl_3D.Core</RootNamespace>
   </PropertyGroup>
 
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
   </ItemGroup>
+  
+  <PropertyGroup>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+  </PropertyGroup>
+
 
 </Project>

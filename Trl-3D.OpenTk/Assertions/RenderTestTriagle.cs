@@ -8,6 +8,8 @@ namespace Trl_3D.Core.Assertions
     {
         public RenderProcessStep ProcessStep => RenderProcessStep.Middle;
 
+        public bool SelfDestruct => false;
+
         private readonly ILogger _logger;
 
         private int _vertexArrayObject;
@@ -46,7 +48,7 @@ void main()
 
         #endregion
 
-        public void Render()
+        public void Render(RenderInfo info)
         {
             GL.UseProgram(_program);
             GL.BindVertexArray(_vertexArrayObject);

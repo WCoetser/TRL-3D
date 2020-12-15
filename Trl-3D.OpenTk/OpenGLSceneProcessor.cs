@@ -11,23 +11,42 @@ namespace Trl_3D.OpenTk
     {
         private readonly ILogger _logger;
 
-        private LinkedList<IAssertion> _assertionListRenderOrder;
+        // Render lists
+        private readonly LinkedList<IAssertion> _assertionListRenderOrder;
         private LinkedListNode<IAssertion> _middleAssertionsInsertPoint;
+
+        // Screen dimensions
+        private readonly RenderInfo _renderInfo;
 
         public OpenGLSceneProcessor(ILogger logger)
         {
             _logger = logger;
             _assertionListRenderOrder = new LinkedList<IAssertion>();
+            _renderInfo = new RenderInfo();
         }
 
         internal void ResizeRenderWindow(int width, int height)
         {
             GL.Viewport(0, 0, width, height);
+            _renderInfo.Width = width;
+            _renderInfo.Height = height;
             _logger.LogInformation($"Window resized to {width}x{height}={width*height} pixels");
         }
 
         public void SetState(IEnumerable<IAssertion> scene)
         {
+            //// See  https://stackoverflow.com/questions/47059154/opengl-render-to-framebuffer-as-well-as-to-display
+            //offscreenBuffer = GL.GenFramebuffer();
+
+            //var buffStatus = GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+            //if (buffStatus != FramebufferErrorCode.FramebufferComplete)
+            //{
+            //    _logger.LogError("TODO: Wait for frame buffer ...");
+            //}
+
+            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, offscreenBuffer);
+
+
             foreach (var assertion in scene)
             {
                 _logger.LogInformation($"Generate state: {assertion.GetType().FullName}");
@@ -38,7 +57,7 @@ namespace Trl_3D.OpenTk
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to generate state.");
+                    _logger.LogError(ex, "Failed to generate state");
                 }
             }
         }
@@ -71,11 +90,37 @@ namespace Trl_3D.OpenTk
             }
         }
 
-        public void Render(double time)
+        public void Render(double timeSinceLastFrame)
         {
-            foreach (var assertion in _assertionListRenderOrder)
+            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, offscreenBuffer);
+
+            //foreach (var assertion in _assertionListRenderOrder)
+            //{
+            //    assertion.Render();
+            //}
+
+            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+            if (!_assertionListRenderOrder.Any())
             {
-                assertion.Render();
+                return;
+            }
+
+            _renderInfo.TotalRenderTime += timeSinceLastFrame;
+            _renderInfo.FrameRate = 1.0 / timeSinceLastFrame;
+
+            var currentNode = _assertionListRenderOrder.First;
+            while (currentNode != null)
+            {
+                var assertion = currentNode.Value;
+                assertion.Render(_renderInfo);
+                var next = currentNode.Next;
+                if (assertion.SelfDestruct)
+                {
+                    _assertionListRenderOrder.Remove(currentNode);
+                    assertion.Dispose();
+                }
+                currentNode = next;                
             }
         }
 

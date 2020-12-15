@@ -13,7 +13,6 @@ namespace Trl_3D.OpenTk
         private ILogger _logger;
         private ISceneLoader _loader;
         private OpenGLSceneProcessor _openGLSceneProcessor;
-        private double _time;
 
         public RenderWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
@@ -34,10 +33,8 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
-            _time += e.Time;
-            _openGLSceneProcessor.Render(_time);
+            _openGLSceneProcessor.Render(e.Time);
             SwapBuffers();
-            //_logger.LogInformation($"Render rate = {1.0 / e.Time} fps");
         }
 
         private void MainWindowResize(ResizeEventArgs obj)

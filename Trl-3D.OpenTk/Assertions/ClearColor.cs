@@ -11,6 +11,8 @@ namespace Trl_3D.Core.Assertions
 
         public RenderProcessStep ProcessStep => RenderProcessStep.Start;
 
+        public bool SelfDestruct => false;
+
         public ClearColor(float red, float green, float blue)
         {
             Red = red;
@@ -23,9 +25,10 @@ namespace Trl_3D.Core.Assertions
             GL.ClearColor(Red, Green, Blue, 1.0f);
         }
 
-        public void Render()
+        public void Render(RenderInfo info)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            // TODO: Refactor depth buffer out
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         }
 
         public void Dispose()

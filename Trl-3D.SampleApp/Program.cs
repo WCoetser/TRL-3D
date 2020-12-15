@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Threading;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.OpenTk;
 
