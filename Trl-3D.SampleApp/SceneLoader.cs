@@ -1,12 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
+
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 using Trl_3D.OpenTk.Assertions;
+
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace Trl_3D.SampleApp
 {
@@ -28,40 +30,28 @@ namespace Trl_3D.SampleApp
                 new RenderTestTriagle(_logger),
                 new GrabScreenshot
                 {
-                    CaptureCallback = (buffer, renderInfo) =>
-                    {
-                        var filename = $"capture.png";
-
-                        var fileInfo = new FileInfo(filename);
-                        if (fileInfo.Exists)
-                        {
-                            fileInfo.Delete();
-                        }
-
-                        using (Bitmap bmp = new Bitmap(renderInfo.Width, renderInfo.Height))
-                        {
-                            for (int x = 0; x < renderInfo.Width; x++)
-                            {
-                                for (int y = 0; y < renderInfo.Height; y++)
-                                {
-                                    var bufferAddress = (y * renderInfo.Width + x) * 3;
-                                    byte red = buffer[bufferAddress];
-                                    byte green = buffer[bufferAddress + 1];
-                                    byte blue = buffer[bufferAddress + 2];
-                                    
-                                    var y_inverted = (renderInfo.Height - 1) - y;
-
-                                    bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
-                                }
-                            }
-
-                            bmp.Save(fileInfo.FullName, ImageFormat.Png);
-                        }
-
-                        _logger.LogInformation($"Captured to {fileInfo.FullName}");
-                    }
+                    CaptureCallback = ProcessCapture
                 }
             };
+        }
+
+        private void ProcessCapture(byte[] buffer, RenderInfo renderInfo)
+        {
+            var filename = $"capture.png";
+
+            var fileInfo = new FileInfo(filename);
+            if (fileInfo.Exists)
+            {
+                fileInfo.Delete();
+            }
+
+            using (var image = Image.LoadPixelData<Rgb24>(buffer, renderInfo.Width, renderInfo.Height))
+            {
+                image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
+                image.SaveAsPng(fileInfo.FullName);
+            }
+
+            _logger.LogInformation($"Captured to {fileInfo.FullName}");
         }
     }
 }
