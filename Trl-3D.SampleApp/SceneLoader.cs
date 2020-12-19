@@ -4,7 +4,6 @@ using System.IO;
 
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
-using Trl_3D.OpenTk.Assertions;
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
@@ -27,7 +26,7 @@ namespace Trl_3D.SampleApp
             return new IAssertion[]
             {
                 new ClearColor(0.1f, 0.1f, 0.2f),
-                new RenderTestTriagle(_logger),
+                new RenderTestTriagle(),
                 new GrabScreenshot
                 {
                     CaptureCallback = ProcessCapture
@@ -45,11 +44,9 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
-            using (var image = Image.LoadPixelData<Rgb24>(buffer, renderInfo.Width, renderInfo.Height))
-            {
-                image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
-                image.SaveAsPng(fileInfo.FullName);
-            }
+            using var image = Image.LoadPixelData<Rgb24>(buffer, renderInfo.Width, renderInfo.Height);
+            image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
+            image.SaveAsPng(fileInfo.FullName);
 
             _logger.LogInformation($"Captured to {fileInfo.FullName}");
         }

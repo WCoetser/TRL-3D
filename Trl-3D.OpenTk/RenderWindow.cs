@@ -1,8 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTK.Graphics.ES30;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System;
 using System.Collections.Generic;
 using Trl_3D.Core.Abstractions;
 
@@ -51,7 +53,7 @@ namespace Trl_3D.OpenTk
         private void MainWindowLoad()
         {
             _logger.LogInformation($"Open GL version: {GL.GetString(StringName.Version)}");
-            IEnumerable<Core.Abstractions.IAssertion> assertions = _loader.LoadInitialScene();
+            IEnumerable<IAssertion> assertions = _loader.LoadInitialScene();
             _openGLSceneProcessor.SetState(assertions);
 
             Closed += MainWindowClosed;
@@ -59,11 +61,11 @@ namespace Trl_3D.OpenTk
             _logger.LogInformation("RenderWindow Load complete");
         }
 
-        public void Initialize(ILogger logger, ISceneLoader loader)
+        public void Initialize(IServiceProvider serviceProvider)
         {
-            _logger = logger;
-            _loader = loader;
-            _openGLSceneProcessor = new OpenGLSceneProcessor(_logger);
+            _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
+            _loader = serviceProvider.GetRequiredService<ISceneLoader>();
+            _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider);
         }
     }
 }

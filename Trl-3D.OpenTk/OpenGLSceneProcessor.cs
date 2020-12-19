@@ -4,25 +4,31 @@ using System.Collections.Generic;
 using Trl_3D.Core.Abstractions;
 using OpenTK.Graphics.OpenGL4;
 using System.Linq;
+using Trl_3D.OpenTk.RenderCommands;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Trl_3D.OpenTk
 {
     public class OpenGLSceneProcessor
     {
         private readonly ILogger _logger;
+        private readonly IServiceProvider _serviceProvider;
 
         // Render lists
-        private readonly LinkedList<IAssertion> _assertionListRenderOrder;
-        private LinkedListNode<IAssertion> _middleAssertionsInsertPoint;
+        private readonly LinkedList<IRenderCommand> _renderList;
+        private LinkedListNode<IRenderCommand> _renderListContentInsertionPoint;
 
-        // Screen dimensions
+        // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
+        private readonly RenderCommandFactory _renderCommandFactory;
 
-        public OpenGLSceneProcessor(ILogger logger)
+        public OpenGLSceneProcessor(IServiceProvider serviceProvider)
         {
-            _logger = logger;
-            _assertionListRenderOrder = new LinkedList<IAssertion>();
+            _serviceProvider = serviceProvider;
+            _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
+            _renderList = new LinkedList<IRenderCommand>();
             _renderInfo = new RenderInfo();
+            _renderCommandFactory = _serviceProvider.GetRequiredService<RenderCommandFactory>();
         }
 
         internal void ResizeRenderWindow(int width, int height)
@@ -35,41 +41,42 @@ namespace Trl_3D.OpenTk
 
         public void SetState(IEnumerable<IAssertion> scene)
         {
-            foreach (var assertion in scene)
+            foreach (var command in scene)
             {
-                _logger.LogInformation($"Generate state: {assertion.GetType().FullName}");
-                InsertAssersionInRenderOrder(assertion);
                 try
                 {
-                    assertion.SetState();
+                    var renderCommand = _renderCommandFactory.CreateRenderCommandForAssertion(command);
+                    _logger.LogInformation($"Generate state: {command.GetType().FullName} mapped to {renderCommand.GetType().FullName}");
+                    InsertAssersionInRenderOrder(renderCommand);
+                    renderCommand.SetState(command);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to generate state");
+                    _logger.LogError(ex, $"Failed to generate state for {command.GetType().FullName}");
                 }
             }
         }
 
-        private void InsertAssersionInRenderOrder(IAssertion assertion)
+        private void InsertAssersionInRenderOrder(IRenderCommand command)
         {
-            if (!_assertionListRenderOrder.Any())
+            if (!_renderList.Any())
             {
-                _assertionListRenderOrder.AddLast(assertion);
-                _middleAssertionsInsertPoint = _assertionListRenderOrder.First;
+                _renderList.AddLast(command);
+                _renderListContentInsertionPoint = _renderList.First;
             }
             else
             {
-                if (assertion.ProcessStep == RenderProcessStep.Start)
+                if (command.ProcessStep == RenderProcessPosition.BeforeContent)
                 {
-                    _assertionListRenderOrder.AddFirst(assertion);
+                    _renderList.AddFirst(command);
                 }
-                else if (assertion.ProcessStep == RenderProcessStep.End)
+                else if (command.ProcessStep == RenderProcessPosition.AfterContent)
                 {
-                    _assertionListRenderOrder.AddLast(assertion);
+                    _renderList.AddLast(command);
                 }
-                else if (assertion.ProcessStep == RenderProcessStep.Middle)
+                else if (command.ProcessStep == RenderProcessPosition.ContentRenderStep)
                 {
-                    _assertionListRenderOrder.AddAfter(_middleAssertionsInsertPoint, assertion);
+                    _renderList.AddAfter(_renderListContentInsertionPoint, command);
                 }
                 else
                 {
@@ -78,19 +85,17 @@ namespace Trl_3D.OpenTk
             }
         }
 
-        public void Render(double timeSinceLastFrame)
+        public void Render(double timeSinceLastFrameSeconds)
         {
+            _renderInfo.TotalRenderTime += timeSinceLastFrameSeconds;
+            _renderInfo.FrameRate = 1.0 / timeSinceLastFrameSeconds;
 
-
-            if (!_assertionListRenderOrder.Any())
+            if (!_renderList.Any())
             {
                 return;
             }
 
-            _renderInfo.TotalRenderTime += timeSinceLastFrame;
-            _renderInfo.FrameRate = 1.0 / timeSinceLastFrame;
-
-            var currentNode = _assertionListRenderOrder.First;
+            var currentNode = _renderList.First;
             while (currentNode != null)
             {
                 var assertion = currentNode.Value;
@@ -98,7 +103,7 @@ namespace Trl_3D.OpenTk
                 var next = currentNode.Next;
                 if (assertion.SelfDestruct)
                 {
-                    _assertionListRenderOrder.Remove(currentNode);
+                    _renderList.Remove(currentNode);
                     assertion.Dispose();
                 }
                 currentNode = next;                
@@ -107,7 +112,7 @@ namespace Trl_3D.OpenTk
 
         public void ReleaseResources()
         {
-            foreach (var assertion in _assertionListRenderOrder)
+            foreach (var assertion in _renderList)
             {
                 assertion.Dispose();
             }

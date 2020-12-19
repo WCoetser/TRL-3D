@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System;
 
 namespace Trl_3D.Core.Abstractions
 {
@@ -10,10 +11,8 @@ namespace Trl_3D.Core.Abstractions
         void Run();
 
         /// <summary>
-        /// Initializes the render window with the basic necesities to make it work.
+        /// Initializes the render window with service provider for further dependency injection as needed.
         /// </summary>
-        /// <param name="logger"></param>
-        /// <param name="sceneLoader"></param>
-        void Initialize(ILogger logger, ISceneLoader sceneLoader);
+        void Initialize(IServiceProvider serviceProvider);
     }
 }

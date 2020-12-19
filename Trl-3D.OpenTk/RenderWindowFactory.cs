@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OpenTK.Windowing.Desktop;
+﻿using OpenTK.Windowing.Desktop;
 using System;
 using Trl_3D.Core.Abstractions;
 
@@ -10,9 +8,6 @@ namespace Trl_3D.OpenTk
     {
         public static IRenderWindow Create(IServiceProvider serviceProvider)
         {
-            var logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
-            var loader = serviceProvider.GetRequiredService<ISceneLoader>();
-
             var settings = new GameWindowSettings
             {
                 IsMultiThreaded = true
@@ -26,7 +21,7 @@ namespace Trl_3D.OpenTk
             };
             
             var renderWindow = new RenderWindow(settings, nativeWindowSettings);
-            renderWindow.Initialize(logger, loader);
+            renderWindow.Initialize(serviceProvider);
 
             return renderWindow;
         }
