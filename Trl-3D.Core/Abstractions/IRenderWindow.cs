@@ -1,10 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using System.Threading.Channels;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.Core.Abstractions
 {
     public interface IRenderWindow
     {
+        /// <summary>
+        /// Channel for receiving updates to the current scene graph.
+        /// </summary>
+        Channel<SceneGraph> SceneGraphUpdatesChannel { get; }
+
         /// <summary>
         /// Shows the window.
         /// </summary>
@@ -13,6 +19,6 @@ namespace Trl_3D.Core.Abstractions
         /// <summary>
         /// Initializes the render window with service provider for further dependency injection as needed.
         /// </summary>
-        void Initialize(IServiceProvider serviceProvider);
+        void Initialize(IServiceProvider serviceProvider);        
     }
 }

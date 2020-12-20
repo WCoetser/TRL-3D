@@ -1,11 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
-using Trl_3D.Core.Abstractions;
-using OpenTK.Graphics.OpenGL4;
 using System.Linq;
+
 using Trl_3D.OpenTk.RenderCommands;
-using Microsoft.Extensions.DependencyInjection;
+using Trl_3D.Core.Scene;
+using Trl_3D.Core.Abstractions;
+
+using OpenTK.Graphics.OpenGL4;
 
 namespace Trl_3D.OpenTk
 {
@@ -17,10 +21,9 @@ namespace Trl_3D.OpenTk
         // Render lists
         private readonly LinkedList<IRenderCommand> _renderList;
         private LinkedListNode<IRenderCommand> _renderListContentInsertionPoint;
-
+        
         // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
-        private readonly RenderCommandFactory _renderCommandFactory;
 
         public OpenGLSceneProcessor(IServiceProvider serviceProvider)
         {
@@ -28,7 +31,6 @@ namespace Trl_3D.OpenTk
             _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
             _renderList = new LinkedList<IRenderCommand>();
             _renderInfo = new RenderInfo();
-            _renderCommandFactory = _serviceProvider.GetRequiredService<RenderCommandFactory>();
         }
 
         internal void ResizeRenderWindow(int width, int height)
@@ -39,25 +41,23 @@ namespace Trl_3D.OpenTk
             _logger.LogInformation($"Window resized to {width}x{height}={width*height} pixels");
         }
 
-        public void SetState(IEnumerable<IAssertion> scene)
+        public void UpdateState(SceneGraph sceneGraph)
         {
-            foreach (var command in scene)
+            // TODO: Add differential rendering
+
+            _renderList.Clear();
+            
+            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
+            InsertCommandInRenderOrder(new RenderTestTriagle(_logger));
+            InsertCommandInRenderOrder(new GrabScreenshot(sceneGraph.RgbBackBufferCaptureCallback));
+
+            foreach (var command in _renderList)
             {
-                try
-                {
-                    var renderCommand = _renderCommandFactory.CreateRenderCommandForAssertion(command);
-                    _logger.LogInformation($"Generate state: {command.GetType().FullName} mapped to {renderCommand.GetType().FullName}");
-                    InsertAssersionInRenderOrder(renderCommand);
-                    renderCommand.SetState(command);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Failed to generate state for {command.GetType().FullName}");
-                }
+                command.SetState();
             }
         }
 
-        private void InsertAssersionInRenderOrder(IRenderCommand command)
+        private void InsertCommandInRenderOrder(IRenderCommand command)
         {
             if (!_renderList.Any())
             {

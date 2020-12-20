@@ -9,14 +9,5 @@
         public int Width { get; set; }
 
         public int Height { get; set; }
-
-        public RenderInfo Clone()
-            => new RenderInfo
-            {
-                TotalRenderTime = TotalRenderTime,
-                FrameRate = FrameRate,
-                Height = Height,
-                Width = Width
-            };
     }
 }

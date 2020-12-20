@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Trl_3D.OpenTk.RenderCommands;
 
 namespace Trl_3D.OpenTk
 {
@@ -7,21 +6,9 @@ namespace Trl_3D.OpenTk
     {
         public static void AddOpenTk(this IServiceCollection serviceCollection)
         {
-            serviceCollection.AddTransient(RenderWindowFactory.Create);
-                        
-            serviceCollection
-                .AddTransient<IRenderCommand, ClearColorCommand>()
-                .AddTransient<ClearColorCommand>();
-
-            serviceCollection
-                .AddTransient<IRenderCommand, RenderTestTriagleCommand>()
-                .AddTransient<RenderTestTriagleCommand>();
-
-            serviceCollection
-                .AddTransient<IRenderCommand, GrabScreenshotCommand>()
-                .AddTransient<GrabScreenshotCommand>();
-
-            serviceCollection.AddSingleton((serviceProvider) => new RenderCommandFactory(serviceProvider));
+            // This needs to be a singleton otherwise there will be a new render window poping up 
+            // for each instance
+            serviceCollection.AddSingleton(RenderWindowFactory.Create);
         }
     }
 }

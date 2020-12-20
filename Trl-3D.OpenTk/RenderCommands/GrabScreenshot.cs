@@ -6,15 +6,18 @@ using OpenTK.Graphics.OpenGL4;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
-    public class GrabScreenshotCommand : IRenderCommand
+    public class GrabScreenshot : IRenderCommand
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.AfterContent;
 
-        private CaptureCallback _captureCallback;
+        private Action<byte[], int, int> _captureCallback;
+
+        public GrabScreenshot(Action<byte[], int, int> captureCallback)
+        {
+            _captureCallback = captureCallback;
+        }
 
         public bool SelfDestruct => true;
-
-        public Type AssociatedAssertionType => typeof(GrabScreenshot);
 
         public void Dispose()
         {
@@ -29,18 +32,12 @@ namespace Trl_3D.OpenTk.RenderCommands
             GL.ReadBuffer(ReadBufferMode.Back);
             GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.UnsignedByte, backBufferDump);
 
-            _captureCallback(backBufferDump, renderInfo.Clone());
+            _captureCallback(backBufferDump, renderInfo.Width, renderInfo.Height);
         }
 
-        public void SetState(GrabScreenshot assertion)
+        public void SetState()
         {
-            _captureCallback = assertion.CaptureCallback;
-        }
-
-        public void SetState(IAssertion assertion)
-        {
-            var a = (GrabScreenshot)assertion;
-            _captureCallback = a.CaptureCallback;
+            // nothiong to do here
         }
     }
 }

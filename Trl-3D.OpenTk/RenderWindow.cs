@@ -5,16 +5,18 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
-using System.Collections.Generic;
+using System.Threading.Channels;
 using Trl_3D.Core.Abstractions;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.OpenTk
 {
     public class RenderWindow : GameWindow, IRenderWindow
     {
         private ILogger _logger;
-        private ISceneLoader _loader;
         private OpenGLSceneProcessor _openGLSceneProcessor;
+
+        public Channel<SceneGraph> SceneGraphUpdatesChannel { get; private set; }
 
         public RenderWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
@@ -23,10 +25,16 @@ namespace Trl_3D.OpenTk
             Resize += MainWindowResize;
             RenderFrame += MainWindowRenderFrame;
             UpdateFrame += MainWindowUpdateFrame;
+
+            SceneGraphUpdatesChannel = Channel.CreateUnbounded<SceneGraph>();
         }
 
         private void MainWindowUpdateFrame(FrameEventArgs obj)
-        {           
+        {
+            // NB: OpenGL state cannot be directly updated from this method
+            
+            // TODO: Pass updates to ISceneLoader.AssertionUpdatesChannel?
+
             if (KeyboardState.IsKeyDown(Keys.Escape))
             {
                 Close();
@@ -35,6 +43,12 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
+            // TODO: Add differential rendering
+            while (SceneGraphUpdatesChannel.Reader.TryRead(out SceneGraph sceneGraph))
+            {
+                _openGLSceneProcessor.UpdateState(sceneGraph);
+            }
+
             _openGLSceneProcessor.Render(e.Time);
             SwapBuffers();
         }
@@ -52,19 +66,15 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowLoad()
         {
-            _logger.LogInformation($"Open GL version: {GL.GetString(StringName.Version)}");
-            IEnumerable<IAssertion> assertions = _loader.LoadInitialScene();
-            _openGLSceneProcessor.SetState(assertions);
-
             Closed += MainWindowClosed;
 
+            _logger.LogInformation($"Open GL version: {GL.GetString(StringName.Version)}");
             _logger.LogInformation("RenderWindow Load complete");
         }
 
         public void Initialize(IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
-            _loader = serviceProvider.GetRequiredService<ISceneLoader>();
             _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider);
         }
     }

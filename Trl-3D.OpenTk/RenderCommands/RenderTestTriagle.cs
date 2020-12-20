@@ -13,20 +13,20 @@ namespace Trl_3D.OpenTk.RenderCommands
     /// https://dreamstatecoding.blogspot.com/p/opengl4-with-opentk-tutorials.html
     /// https://learnopengl.com/Getting-started/Hello-Triangle
     /// </summary>
-    public class RenderTestTriagleCommand : IRenderCommand
+    public class RenderTestTriagle : IRenderCommand
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.ContentRenderStep;
 
         public bool SelfDestruct => false;
 
-        public Type AssociatedAssertionType => typeof(RenderTestTriagle);
+        public Type AssociatedAssertionType => typeof(Core.Assertions.RenderTestTriagle);
 
         private readonly ILogger _logger;
 
         private int _vertexArrayObject;
         private int _vertexBufferObject;
 
-        public RenderTestTriagleCommand(ILogger<RenderTestTriagleCommand> logger)
+        public RenderTestTriagle(ILogger logger)
         {
             _logger = logger;
         }
@@ -66,9 +66,8 @@ void main()
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
         }
 
-        public void SetState(IAssertion assertion)
+        public void SetState()
         {
-            var renderTestTriagle = (RenderTestTriagle)assertion;
             _program = CompileShaders();
 
             var vertices = new[] {

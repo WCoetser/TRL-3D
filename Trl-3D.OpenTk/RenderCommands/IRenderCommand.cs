@@ -6,11 +6,6 @@ namespace Trl_3D.OpenTk.RenderCommands
     public interface IRenderCommand : IDisposable
     {
         /// <summary>
-        /// The type of the assersion for this render command.
-        /// </summary>
-        Type AssociatedAssertionType { get; }
-
-        /// <summary>
         /// When to perform the render step.
         /// </summary>
         RenderProcessPosition ProcessStep { get; }
@@ -21,9 +16,9 @@ namespace Trl_3D.OpenTk.RenderCommands
         bool SelfDestruct { get; }
 
         /// <summary>
-        /// Builds buffers etc. based on the parameters from the assertion/
+        /// Generates buffers, prepare for rendering with <see cref="Render(RenderInfo)"/>
         /// </summary>
-        void SetState(IAssertion assertion);
+        void SetState();
 
         /// <summary>
         /// Shows state from <see cref="SetState"/>

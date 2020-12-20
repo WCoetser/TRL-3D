@@ -1,14 +1,13 @@
-﻿using Trl_3D.Core.Abstractions;
+﻿using System;
+using Trl_3D.Core.Abstractions;
 
 namespace Trl_3D.Core.Assertions
 {
-    public delegate void CaptureCallback(byte[] bufferOut, RenderInfo time);
-
     public class GrabScreenshot : IAssertion
     {
         /// <summary>
         /// Called onnce a screenshot is captured.
         /// </summary>
-        public CaptureCallback CaptureCallback { get; set; }
+        public Action<byte[], int, int> CaptureCallback { get; set; } // buffer, width, height
     }
 }

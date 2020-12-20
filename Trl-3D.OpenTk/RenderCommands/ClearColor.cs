@@ -1,18 +1,21 @@
 ﻿using Trl_3D.Core.Abstractions;
-using Trl_3D.Core.Assertions;
 
 using OpenTK.Graphics.OpenGL4;
-using System;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
-    public class ClearColorCommand : IRenderCommand
+    public class ClearColor : IRenderCommand
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.BeforeContent;
 
-        public bool SelfDestruct => false;
+        private readonly float[] _clearColor;
 
-        public Type AssociatedAssertionType => typeof(ClearColor);
+        public ClearColor(float[] rgbColor)
+        {
+            _clearColor = rgbColor;
+        }
+
+        public bool SelfDestruct => false;
 
         public void Dispose()
         {
@@ -25,10 +28,9 @@ namespace Trl_3D.OpenTk.RenderCommands
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         }
 
-        public void SetState(IAssertion assertion)
+        public void SetState()
         {
-            var clearColor = (ClearColor)assertion;
-            GL.ClearColor(clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
+            GL.ClearColor(_clearColor[0], _clearColor[1], _clearColor[2], 1.0f);
         }
     }
 }

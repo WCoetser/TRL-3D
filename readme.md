@@ -13,6 +13,8 @@ Main goals:
 * Decoupled render logic with async render update command queue going in and events coming out.
 * Standard .NET logging and depencency injection.
 
-# Licence
+# Licences
 
 This project is released under the MIT license, see [licence.txt](license.txt).
+
+Also see referenced third party libraries for further licences.

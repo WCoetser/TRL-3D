@@ -1,17 +1,20 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.IO;
 
-using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
+using Trl_3D.Core.Abstractions;
+
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using System.IO;
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using System.Threading;
 
 namespace Trl_3D.SampleApp
 {
-    public class SceneLoader : ISceneLoader
+    public class SceneLoader : IAssertionLoader
     {
         private readonly ILogger<SceneLoader> _logger;
 
@@ -19,22 +22,23 @@ namespace Trl_3D.SampleApp
         {
             _logger = logger;
             _logger.LogInformation("SceneLoader created");
+            AssertionUpdatesChannel = Channel.CreateUnbounded<IAssertion>();
         }
 
-        public IEnumerable<IAssertion> LoadInitialScene()
+        public Channel<IAssertion> AssertionUpdatesChannel { get; private set; }
+
+        public async Task StartAssertionProducer(CancellationToken cancellationToken)
         {
-            return new IAssertion[]
-            {
-                new ClearColor(0.1f, 0.1f, 0.2f),
-                new RenderTestTriagle(),
-                new GrabScreenshot
-                {
-                    CaptureCallback = ProcessCapture
-                }
-            };
+            await AssertionUpdatesChannel.Writer.WriteAsync(new ClearColor(0.1f, 0.1f, 0.2f), cancellationToken);
+            await AssertionUpdatesChannel.Writer.WriteAsync(new RenderTestTriagle(), cancellationToken);
+            await AssertionUpdatesChannel.Writer.WriteAsync(new GrabScreenshot { CaptureCallback = ProcessCapture }, cancellationToken);
+
+            AssertionUpdatesChannel.Writer.Complete();
+
+            _logger.LogInformation("Scene assertion producer stopped.");
         }
 
-        private void ProcessCapture(byte[] buffer, RenderInfo renderInfo)
+        private void ProcessCapture(byte[] buffer, int width, int height)
         {
             var filename = $"capture.png";
 
@@ -44,7 +48,8 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
-            using var image = Image.LoadPixelData<Rgb24>(buffer, renderInfo.Width, renderInfo.Height);
+            using var image = Image.LoadPixelData<Rgb24>(buffer, width, height);
+
             image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
             image.SaveAsPng(fileInfo.FullName);
 
