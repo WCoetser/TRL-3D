@@ -45,9 +45,13 @@ namespace Trl_3D.SampleApp
                 var renderWindow = serviceProvider.GetRequiredService<IRenderWindow>();
                 renderWindow.Run();
 
-                // Wait for producer and consumer threads to terminate
+                // Terminate producer/consumer threads
                 cancellationTokenSource.Cancel();
                 await Task.WhenAll(sceneProducer, sceneConsumer);
+            }
+            catch (OperationCanceledException _)
+            {
+                // This will be thrown when producer/consumer threads terminate due to cancellation tokens
             }
             finally
             {

@@ -10,11 +10,6 @@ namespace Trl_3D.Core.Abstractions
     public interface IAssertionLoader
     {
         /// <summary>
-        /// The channel render assertions are written to by the loader.
-        /// </summary>
-        Channel<IAssertion> AssertionUpdatesChannel { get; }
-
-        /// <summary>
         /// Loads assertions into the <see cref="Channel"/> for async consumption.
         /// </summary>
         /// <returns></returns>

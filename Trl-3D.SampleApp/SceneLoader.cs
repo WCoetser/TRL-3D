@@ -3,7 +3,6 @@
 using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Abstractions;
 
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.IO;
 
@@ -17,23 +16,23 @@ namespace Trl_3D.SampleApp
     public class SceneLoader : IAssertionLoader
     {
         private readonly ILogger<SceneLoader> _logger;
+        private readonly IScene _scene;
 
-        public SceneLoader(ILogger<SceneLoader> logger)
+        public SceneLoader(ILogger<SceneLoader> logger, IScene scene)
         {
             _logger = logger;
+            _scene = scene;
             _logger.LogInformation("SceneLoader created");
-            AssertionUpdatesChannel = Channel.CreateUnbounded<IAssertion>();
         }
-
-        public Channel<IAssertion> AssertionUpdatesChannel { get; private set; }
 
         public async Task StartAssertionProducer(CancellationToken cancellationToken)
         {
-            await AssertionUpdatesChannel.Writer.WriteAsync(new ClearColor(0.1f, 0.1f, 0.2f), cancellationToken);
-            await AssertionUpdatesChannel.Writer.WriteAsync(new RenderTestTriagle(), cancellationToken);
-            await AssertionUpdatesChannel.Writer.WriteAsync(new GrabScreenshot { CaptureCallback = ProcessCapture }, cancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new ClearColor(0.1f, 0.1f, 0.2f), cancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new RenderTestTriagle(), cancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new GrabScreenshot { CaptureCallback = ProcessCapture }, cancellationToken);
 
-            AssertionUpdatesChannel.Writer.Complete();
+            // TODO: Remove this when implementing differential rendering
+            _scene.AssertionUpdatesChannel.Writer.Complete();
 
             _logger.LogInformation("Scene assertion producer stopped.");
         }

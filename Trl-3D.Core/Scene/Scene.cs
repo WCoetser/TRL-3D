@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 using Trl_3D.Core.Abstractions;
@@ -8,19 +9,22 @@ namespace Trl_3D.Core.Scene
 {
     public class Scene : IScene 
     { 
-        private readonly IAssertionLoader _assertionLoader;
         private readonly ILogger<Scene> _logger;
         private readonly IRenderWindow _renderWindow;
         private readonly AssertionProcessor _assertionProcessor;
 
-        public Scene(IAssertionLoader assertionLoader,
-                     ILogger<Scene> logger,
+        public Channel<IAssertion> AssertionUpdatesChannel { get; private set; }
+
+        public Scene(ILogger<Scene> logger,
                      IRenderWindow renderWindow)
         {
-            _assertionLoader = assertionLoader;
             _logger = logger;
             _renderWindow = renderWindow;
             _assertionProcessor = new AssertionProcessor();
+
+            AssertionUpdatesChannel = Channel.CreateUnbounded<IAssertion>();
+
+            _logger.LogInformation("Scene created.");
         }
 
         public async Task StartAssertionConsumer(CancellationToken cancellationToken)
@@ -28,7 +32,7 @@ namespace Trl_3D.Core.Scene
             // TODO: Add differential rendering
             SceneGraph sceneGraph = new SceneGraph();
 
-            await foreach (var assertion in _assertionLoader.AssertionUpdatesChannel.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var assertion in AssertionUpdatesChannel.Reader.ReadAllAsync(cancellationToken))
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -38,6 +42,7 @@ namespace Trl_3D.Core.Scene
                 _assertionProcessor.Process(assertion, sceneGraph);
             }
 
+            // TODO: Move updates to await foreach loop
             await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(sceneGraph, cancellationToken);
 
             _logger.LogInformation("Scene assertion consumer stopped.");
