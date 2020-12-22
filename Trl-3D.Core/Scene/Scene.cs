@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+
+using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -34,8 +36,19 @@ namespace Trl_3D.Core.Scene
 
             await foreach (var assertion in AssertionUpdatesChannel.Reader.ReadAllAsync(cancellationToken))
             {
-                _logger.LogInformation($"Received {assertion.GetType().Name}");
-                _assertionProcessor.Process(assertion, sceneGraph);
+                try
+                {
+                    _logger.LogInformation($"Received {assertion.GetType().Name}");
+                    _assertionProcessor.Process(assertion, sceneGraph);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Scene assertion processor failed");
+                }
             }
 
             // TODO: Move updates to await foreach loop

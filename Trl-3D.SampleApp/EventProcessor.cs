@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,12 +31,23 @@ namespace Trl_3D.SampleApp
             _logger.LogInformation("EventProcessor started");
             await foreach (var evt in _renderWindow.EventChannel.Reader.ReadAllAsync(cancelationToken))
             {
-                // TODO: Remove
-                _logger.LogInformation($"Received {evt.GetType().FullName}");
-
-                if (evt is ScreenCaptureEvent sce)
+                try
                 {
-                    ProcessCapture(sce.RgbBuffer, sce.Width, sce.Height);
+                    // TODO: Remove
+                    _logger.LogInformation($"Received {evt.GetType().FullName}");
+
+                    if (evt is ScreenCaptureEvent sce)
+                    {
+                        ProcessCapture(sce.RgbBuffer, sce.Width, sce.Height);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Event processor failed");
                 }
             }
             _logger.LogInformation("EventProcessor stopped");

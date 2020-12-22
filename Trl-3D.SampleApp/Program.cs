@@ -52,6 +52,8 @@ namespace Trl_3D.SampleApp
 
                 // Terminate producer/consumer threads
                 cancellationTokenSource.Cancel();
+
+                // Await tasks to catch any lingering unhandled exceptions
                 await Task.WhenAll(sceneProducerTask, sceneConsumerTask, eventProcessorTask);
             }
             catch (OperationCanceledException e) 
