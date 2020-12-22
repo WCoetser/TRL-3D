@@ -34,10 +34,6 @@ namespace Trl_3D.Core.Scene
 
             await foreach (var assertion in AssertionUpdatesChannel.Reader.ReadAllAsync(cancellationToken))
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
                 _logger.LogInformation($"Received {assertion.GetType().Name}");
                 _assertionProcessor.Process(assertion, sceneGraph);
             }

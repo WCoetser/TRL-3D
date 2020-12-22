@@ -18,6 +18,8 @@ namespace Trl_3D.OpenTk
 
         public Channel<SceneGraph> SceneGraphUpdatesChannel { get; private set; }
 
+        public Channel<IEvent> EventChannel { get; private set; }
+
         public RenderWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
         {
@@ -27,6 +29,7 @@ namespace Trl_3D.OpenTk
             UpdateFrame += MainWindowUpdateFrame;
 
             SceneGraphUpdatesChannel = Channel.CreateUnbounded<SceneGraph>();
+            EventChannel = Channel.CreateUnbounded<IEvent>();
         }
 
         private void MainWindowUpdateFrame(FrameEventArgs obj)
@@ -75,7 +78,7 @@ namespace Trl_3D.OpenTk
         public void Initialize(IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
-            _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider);
+            _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this);
         }
     }
 }

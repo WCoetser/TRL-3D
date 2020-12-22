@@ -7,7 +7,6 @@ namespace Trl_3D.Core.Scene
     {
         public float[] RgbClearColor { get; set; }
         public Dictionary<long, Vertex> Vertices { get; private set; }
-        public Action<byte[], int, int> RgbBackBufferCaptureCallback { get; set; } // args = content, width, height
         public List<Surface> Surfaces { get; private set; }
 
         public SceneGraph()

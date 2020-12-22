@@ -12,6 +12,11 @@ namespace Trl_3D.Core.Abstractions
         Channel<SceneGraph> SceneGraphUpdatesChannel { get; }
 
         /// <summary>
+        /// Channel for events going out of the 3D engine, ex. mouse, keyboard, screenshot
+        /// </summary>
+        Channel<IEvent> EventChannel { get; }
+
+        /// <summary>
         /// Shows the window.
         /// </summary>
         void Run();

@@ -21,7 +21,7 @@ namespace Trl_3D.Core.Scene
             }
             else if (assertion is GrabScreenshot grabScreenshot)
             {
-                sceneGraph.RgbBackBufferCaptureCallback = grabScreenshot.CaptureCallback;
+                // Nothing to do here, screenshots passed out to event processor via render window event channel
             }
             else
             {

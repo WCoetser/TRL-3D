@@ -21,6 +21,10 @@ namespace Trl_3D.SampleApp
         public static async Task Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
+            
+            // Cancelation token to stop all producers and consumers when program completes
+            using var cancellationTokenSource = new CancellationTokenSource();
+
             try
             {
                 IHost host = Host.CreateDefaultBuilder(args)
@@ -30,16 +34,17 @@ namespace Trl_3D.SampleApp
                 using var serviceScope = host.Services.CreateScope();
                 serviceProvider = serviceScope.ServiceProvider;
 
-                // Cancelation token to stop all producers and consumers when program completes
-                using var cancellationTokenSource = new CancellationTokenSource();
-
                 // Produce scene elements (assertions) on seperate thread using producer-consumer pattern
                 var loader = serviceProvider.GetRequiredService<IAssertionLoader>();
-                var sceneProducer = Task.Run(async () => await loader.StartAssertionProducer(cancellationTokenSource.Token));
+                var sceneProducerTask = Task.Run(async () => await loader.StartAssertionProducer(cancellationTokenSource.Token));
 
                 // Consume scene elements (assertions) on seperate thread using producer-consumer pattern
                 var scene = serviceProvider.GetRequiredService<IScene>();
-                var sceneConsumer = Task.Run(async () => await scene.StartAssertionConsumer(cancellationTokenSource.Token));
+                var sceneConsumerTask = Task.Run(async () => await scene.StartAssertionConsumer(cancellationTokenSource.Token));
+
+                // Events are processed on it's own thread
+                var eventProcessor = serviceProvider.GetRequiredService<IEventProcessor>();
+                var eventProcessorTask = Task.Run(async () => await eventProcessor.StartEventProcessor(cancellationTokenSource.Token));
 
                 // Main UI thread
                 var renderWindow = serviceProvider.GetRequiredService<IRenderWindow>();
@@ -47,9 +52,11 @@ namespace Trl_3D.SampleApp
 
                 // Terminate producer/consumer threads
                 cancellationTokenSource.Cancel();
-                await Task.WhenAll(sceneProducer, sceneConsumer);
+                await Task.WhenAll(sceneProducerTask, sceneConsumerTask, eventProcessorTask);
             }
-            catch (OperationCanceledException _)
+            catch (OperationCanceledException e) 
+                when (e.CancellationToken == cancellationTokenSource.Token 
+                    && cancellationTokenSource.IsCancellationRequested)
             {
                 // This will be thrown when producer/consumer threads terminate due to cancellation tokens
             }
@@ -105,6 +112,7 @@ namespace Trl_3D.SampleApp
             services.AddOpenTk();
 
             services.AddSingleton<IAssertionLoader, SceneLoader>();
+            services.AddSingleton<IEventProcessor, EventProcessor>();
         }
     }
 }

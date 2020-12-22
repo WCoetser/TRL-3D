@@ -17,6 +17,7 @@ namespace Trl_3D.OpenTk
     {
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IRenderWindow _renderWindow;
 
         // Render lists
         private readonly LinkedList<IRenderCommand> _renderList;
@@ -25,8 +26,9 @@ namespace Trl_3D.OpenTk
         // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
 
-        public OpenGLSceneProcessor(IServiceProvider serviceProvider)
+        public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
         {
+            _renderWindow = renderWindow;
             _serviceProvider = serviceProvider;
             _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
             _renderList = new LinkedList<IRenderCommand>();
@@ -49,7 +51,7 @@ namespace Trl_3D.OpenTk
             
             InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
             InsertCommandInRenderOrder(new RenderTestTriagle(_logger));
-            InsertCommandInRenderOrder(new GrabScreenshot(sceneGraph.RgbBackBufferCaptureCallback));
+            InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow));
 
             foreach (var command in _renderList)
             {
