@@ -13,6 +13,6 @@ namespace Trl_3D.Core.Abstractions
         /// Loads assertions into the <see cref="Channel"/> for async consumption.
         /// </summary>
         /// <returns></returns>
-        Task StartAssertionProducer(CancellationToken cancellationToken);
+        Task StartAssertionProducer();
     }
 }

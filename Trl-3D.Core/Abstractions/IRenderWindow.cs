@@ -24,6 +24,11 @@ namespace Trl_3D.Core.Abstractions
         /// <summary>
         /// Initializes the render window with service provider for further dependency injection as needed.
         /// </summary>
-        void Initialize(IServiceProvider serviceProvider);        
+        void Initialize(IServiceProvider serviceProvider);
+        
+        /// <summary>
+        /// Closes the render window
+        /// </summary>
+        void Close();
     }
 }

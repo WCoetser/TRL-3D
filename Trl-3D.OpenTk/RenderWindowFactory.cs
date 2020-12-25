@@ -19,11 +19,11 @@ namespace Trl_3D.OpenTk
                 APIVersion = new Version(4, 5),
                 API = OpenTK.Windowing.Common.ContextAPI.OpenGL
             };
-            
-            var renderWindow = new RenderWindow(settings, nativeWindowSettings);
-            renderWindow.Initialize(serviceProvider);
 
-            return renderWindow;
+            var renderWindowSingleton = new RenderWindow(settings, nativeWindowSettings);
+            renderWindowSingleton.Initialize(serviceProvider);
+
+            return renderWindowSingleton;
         }
     }
 }

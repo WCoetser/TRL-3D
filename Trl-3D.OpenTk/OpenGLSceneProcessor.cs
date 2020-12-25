@@ -18,6 +18,7 @@ namespace Trl_3D.OpenTk
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IRenderWindow _renderWindow;
+        private readonly ICancellationTokenManager _cancellationTokenManager;
 
         // Render lists
         private readonly LinkedList<IRenderCommand> _renderList;
@@ -28,9 +29,11 @@ namespace Trl_3D.OpenTk
 
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
         {
-            _renderWindow = renderWindow;
             _serviceProvider = serviceProvider;
+            _cancellationTokenManager = _serviceProvider.GetRequiredService<ICancellationTokenManager>();
             _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
+
+            _renderWindow = renderWindow; // This cannot be passed via the service provider otherwise there will be a cycle in the DI graph
             _renderList = new LinkedList<IRenderCommand>();
             _renderInfo = new RenderInfo();
         }
@@ -51,7 +54,7 @@ namespace Trl_3D.OpenTk
             
             InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
             InsertCommandInRenderOrder(new RenderTestTriagle(_logger));
-            InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow));
+            InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
 
             foreach (var command in _renderList)
             {

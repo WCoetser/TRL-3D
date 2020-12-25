@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -13,46 +14,57 @@ namespace Trl_3D.Core.Scene
     { 
         private readonly ILogger<Scene> _logger;
         private readonly IRenderWindow _renderWindow;
+        private readonly ICancellationTokenManager _cancellationTokenManager;
         private readonly AssertionProcessor _assertionProcessor;
 
-        public Channel<IAssertion> AssertionUpdatesChannel { get; private set; }
+        public Channel<AssertionBatch> AssertionUpdatesChannel { get; private set; }
 
         public Scene(ILogger<Scene> logger,
-                     IRenderWindow renderWindow)
+                     IRenderWindow renderWindow,
+                     ICancellationTokenManager cancellationTokenManager)
         {
             _logger = logger;
             _renderWindow = renderWindow;
+            _cancellationTokenManager = cancellationTokenManager;
             _assertionProcessor = new AssertionProcessor();
 
-            AssertionUpdatesChannel = Channel.CreateUnbounded<IAssertion>();
+            AssertionUpdatesChannel = Channel.CreateUnbounded<AssertionBatch>();
 
             _logger.LogInformation("Scene created.");
         }
 
-        public async Task StartAssertionConsumer(CancellationToken cancellationToken)
+        public async Task StartAssertionConsumer()
         {
             // TODO: Add differential rendering
             SceneGraph sceneGraph = new SceneGraph();
 
-            await foreach (var assertion in AssertionUpdatesChannel.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken))
             {
-                try
+                if (assertionBatch.Assertions == null || !assertionBatch.Assertions.Any())
                 {
-                    _logger.LogInformation($"Received {assertion.GetType().Name}");
-                    _assertionProcessor.Process(assertion, sceneGraph);
+                    _logger.LogWarning("Assertion batch has no assertions");
+                    continue;
                 }
-                catch (OperationCanceledException)
+                foreach (var assertion in assertionBatch.Assertions)
                 {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Scene assertion processor failed");
+                    try
+                    {
+                        _logger.LogInformation($"Received {assertion.GetType().Name}");
+                        _assertionProcessor.Process(assertion, sceneGraph);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Scene assertion processor failed");
+                    }
                 }
             }
 
             // TODO: Move updates to await foreach loop
-            await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(sceneGraph, cancellationToken);
+            await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(sceneGraph, _cancellationTokenManager.CancellationToken);
 
             _logger.LogInformation("Scene assertion consumer stopped.");
         }

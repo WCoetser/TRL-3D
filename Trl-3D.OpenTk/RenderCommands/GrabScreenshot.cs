@@ -10,12 +10,14 @@ namespace Trl_3D.OpenTk.RenderCommands
     public class GrabScreenshot : IRenderCommand
     {
         private readonly IRenderWindow _renderWindow;
+        private readonly ICancellationTokenManager _cancellationTokenManager;
 
         public RenderProcessPosition ProcessStep => RenderProcessPosition.AfterContent;
 
-        public GrabScreenshot(IRenderWindow renderWindow)
+        public GrabScreenshot(IRenderWindow renderWindow, ICancellationTokenManager cancellationTokenManager)
         {
             _renderWindow = renderWindow;
+            _cancellationTokenManager = cancellationTokenManager;
         }
 
         public bool SelfDestruct => true;
@@ -37,7 +39,7 @@ namespace Trl_3D.OpenTk.RenderCommands
                 Width = renderInfo.Width,
                 Height = renderInfo.Height
             };
-            var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent).AsTask();
+            var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent, _cancellationTokenManager.CancellationToken).AsTask();
             t.Wait();
         }
 

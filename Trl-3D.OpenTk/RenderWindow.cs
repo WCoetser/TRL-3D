@@ -1,13 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenTK.Graphics.ES30;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
 using System.Threading.Channels;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Scene;
+using OpenTK.Graphics.OpenGL4;
+using Trl_3D.Core.Events;
+using System.Threading.Tasks;
 
 namespace Trl_3D.OpenTk
 {
@@ -15,12 +16,14 @@ namespace Trl_3D.OpenTk
     {
         private ILogger _logger;
         private OpenGLSceneProcessor _openGLSceneProcessor;
+        private ICancellationTokenManager _cancellationTokenManager;
 
         public Channel<SceneGraph> SceneGraphUpdatesChannel { get; private set; }
 
         public Channel<IEvent> EventChannel { get; private set; }
 
-        public RenderWindow(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
+        public RenderWindow(GameWindowSettings gameWindowSettings, 
+                            NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
         {
             Load += MainWindowLoad;
@@ -34,19 +37,18 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowUpdateFrame(FrameEventArgs obj)
         {
-            // NB: OpenGL state cannot be directly updated from this method
-            
-            // TODO: Pass updates to ISceneLoader.AssertionUpdatesChannel?
-
-            if (KeyboardState.IsKeyDown(Keys.Escape))
+            var userEvent = new UserInputStateEvent(KeyboardState.GetSnapshot(), MouseState.GetSnapshot(), obj.Time);
+            var task = Task.Run(async () =>
             {
-                Close();
-            }
+                await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.CancellationToken).AsTask();
+            });
+            task.Wait();
         }
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
             // TODO: Add differential rendering
+            // This should only update the OpenGL state when there are inputs in the scene graph update channel
             while (SceneGraphUpdatesChannel.Reader.TryRead(out SceneGraph sceneGraph))
             {
                 _openGLSceneProcessor.UpdateState(sceneGraph);
@@ -79,6 +81,7 @@ namespace Trl_3D.OpenTk
         {
             _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
             _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this);
+            _cancellationTokenManager = serviceProvider.GetRequiredService<ICancellationTokenManager>();
         }
     }
 }
