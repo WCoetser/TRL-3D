@@ -33,12 +33,7 @@ namespace Trl_3D.OpenTk.RenderCommands
             GL.ReadBuffer(ReadBufferMode.Back);
             GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.UnsignedByte, backBufferDump);
 
-            var screenCaptureEvent = new ScreenCaptureEvent
-            {
-                RgbBuffer = backBufferDump,
-                Width = renderInfo.Width,
-                Height = renderInfo.Height
-            };
+            var screenCaptureEvent = new ScreenCaptureEvent(backBufferDump, renderInfo.Width, renderInfo.Height);
             var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent, _cancellationTokenManager.CancellationToken).AsTask();
             t.Wait();
         }
