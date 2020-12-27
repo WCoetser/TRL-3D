@@ -2,5 +2,6 @@
 {
     public class Vertex
     {
+        public Coordinate3d Coordinates { get; set; }
     }
 }

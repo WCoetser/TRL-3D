@@ -1,4 +1,5 @@
 ﻿using Trl_3D.Core.Abstractions;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.Core.Assertions
 {
@@ -6,6 +7,7 @@ namespace Trl_3D.Core.Assertions
 
     public record GrabScreenshot() : IAssertion;
 
-    public record RenderTestTriagle() : IAssertion;
+    public record Vertex(ulong vertexId, Coordinate3d Coordinates) : IAssertion;
 
+    public record Triangle(ulong triangleId, (ulong Point1Id, ulong Point2Id, ulong Point3Id) VertexIds) : IAssertion;
 }

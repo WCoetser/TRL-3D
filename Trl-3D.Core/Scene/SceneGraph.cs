@@ -1,20 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Trl_3D.Core.Scene
 {
     public class SceneGraph
     {
-        public float[] RgbClearColor { get; set; }
-        public Dictionary<long, Vertex> Vertices { get; private set; }
-        public List<Surface> Surfaces { get; private set; }
+        public ColorRgb RgbClearColor { get; set; }
+        public Dictionary<ulong, Vertex> Vertices { get; private set; }        
+        public Dictionary<ulong, Triangle> Triangles { get; private set; }
 
         public SceneGraph()
         {
-            // Default values for scene objects
-            RgbClearColor = new[] { 1.0f, 1.0f, 1.0f };
-            Vertices = new Dictionary<long, Vertex>();
-            Surfaces = new List<Surface>();
+            RgbClearColor = new (1.0f, 1.0f, 1.0f);
+            Triangles = new Dictionary<ulong, Triangle>();
+            Vertices = new Dictionary<ulong, Vertex>();
+        }
+
+        public IEnumerable<(Vertex v1, Vertex v2, Vertex v3)> GetCompleteTriangles()
+        {
+            foreach (var triangle in Triangles
+                .Where(pair => IsTriangleReady(pair.Key))
+                .Select(pair => pair.Value))
+            {
+                yield return (Vertices[triangle.Vertices.VertexId1],
+                        Vertices[triangle.Vertices.VertexId2],
+                        Vertices[triangle.Vertices.VertexId3]);
+            }
+        }
+
+        private bool IsTriangleReady(ulong triangleId)
+        {
+            return Triangles.TryGetValue(triangleId, out Triangle triangle)
+                && Vertices.ContainsKey(triangle.Vertices.VertexId1)
+                && Vertices.ContainsKey(triangle.Vertices.VertexId2)
+                && Vertices.ContainsKey(triangle.Vertices.VertexId3);
         }
     }
 }

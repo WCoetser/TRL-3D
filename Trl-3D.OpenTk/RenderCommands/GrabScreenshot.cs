@@ -1,8 +1,6 @@
 ﻿using Trl_3D.Core.Abstractions;
 
 using OpenTK.Graphics.OpenGL4;
-
-using System.Threading.Tasks;
 using Trl_3D.Core.Events;
 
 namespace Trl_3D.OpenTk.RenderCommands

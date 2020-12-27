@@ -13,11 +13,15 @@ namespace Trl_3D.Core.Scene
         {
             if (assertion is ClearColor clearColor)
             {
-                sceneGraph.RgbClearColor = new[] { clearColor.Red, clearColor.Green, clearColor.Blue };
+                sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue);
             }
-            else if (assertion is RenderTestTriagle renderTestTriagle)
+            else if (assertion is Assertions.Vertex vertex)
             {
-                // TODO: load surfaces and vertices
+                sceneGraph.Vertices[vertex.vertexId] = new Vertex { Coordinates = vertex.Coordinates };
+            }
+            else if (assertion is Assertions.Triangle triangle)
+            {
+                sceneGraph.Triangles[triangle.triangleId] = new Triangle { Vertices = triangle.VertexIds };
             }
             else if (assertion is GrabScreenshot grabScreenshot)
             {

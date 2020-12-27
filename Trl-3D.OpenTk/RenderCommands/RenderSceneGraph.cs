@@ -1,48 +1,43 @@
 ﻿using Trl_3D.Core.Abstractions;
-using Trl_3D.Core.Assertions;
 
 using OpenTK.Graphics.OpenGL4;
 
 using Microsoft.Extensions.Logging;
-using System;
+using Trl_3D.Core.Scene;
+using System.Linq;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
-    /// <summary>
-    /// OpenGL Tutorial References:
-    /// https://dreamstatecoding.blogspot.com/p/opengl4-with-opentk-tutorials.html
-    /// https://learnopengl.com/Getting-started/Hello-Triangle
-    /// </summary>
-    public class RenderTestTriagle : IRenderCommand
+    public class RenderSceneGraph : IRenderCommand
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.ContentRenderStep;
 
         public bool SelfDestruct => false;
 
-        public Type AssociatedAssertionType => typeof(Core.Assertions.RenderTestTriagle);
-
         private readonly ILogger _logger;
-
+        private readonly SceneGraph _sceneGraph;
         private int _vertexArrayObject;
         private int _vertexBufferObject;
 
-        public RenderTestTriagle(ILogger logger)
+        public RenderSceneGraph(ILogger logger, SceneGraph sceneGraph)
         {
             _logger = logger;
+            _sceneGraph = sceneGraph;
         }
 
         #region Shaders
 
         private int _program;
+        private int _triangleCount;
         const string vertexShaderCode =
 @"
 #version 450 core
 
-layout (location = 0) in vec3 aPos;
+layout (location = 0) in vec3 vertexPosition;
 
 void main()
 {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
         const string fragmentShaderCode =
@@ -63,32 +58,51 @@ void main()
         {
             GL.UseProgram(_program);
             GL.BindVertexArray(_vertexArrayObject);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            GL.DrawArrays(PrimitiveType.Triangles, 0, _triangleCount * 3);
         }
 
         public void SetState()
-        {
+        {   
             _program = CompileShaders();
 
-            var vertices = new[] {
-                -0.5f, -0.5f, 0.0f,
-                 0.5f, -0.5f, 0.0f,
-                 0.0f,  0.5f, 0.0f
-            };
-            var stride = 3 * sizeof(float); // 12 bytes per row = data for one vertex
+            // Load triangles into render buffer for batch rendering
+            const int componentsPerVertex = 3; // only 3D location for now
+            const int verticesPerTriangle = 3;
+            var readyListCount = _sceneGraph.GetCompleteTriangles().Count();
+            var vertexBuffer = new float[readyListCount * componentsPerVertex * verticesPerTriangle];
+            int position = 0;
+            _triangleCount = 0;
+            foreach (var triangle in _sceneGraph.GetCompleteTriangles())
+            {
+                void loadVertexPosition(Vertex v)
+                {
+                    vertexBuffer[position++] = v.Coordinates.X;
+                    vertexBuffer[position++] = v.Coordinates.Y;
+                    vertexBuffer[position++] = v.Coordinates.Z;
+                };
+                
+                loadVertexPosition(triangle.v1);
+                loadVertexPosition(triangle.v2);
+                loadVertexPosition(triangle.v3);
 
-            // Draw data
-            _vertexBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticCopy);
+                _triangleCount++;
+            }
 
-            // Draw attributes
-            _vertexArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObject);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            var stride = componentsPerVertex * sizeof(float); // 12 bytes per row = data for one vertex position
+
+            var vertexArrays = new int[1];
+            GL.CreateVertexArrays(1, vertexArrays);
+            GL.BindVertexArray(vertexArrays[0]);
+            _vertexArrayObject = vertexArrays[0];
+
+            var buffers = new int[1];
+            GL.CreateBuffers(1, buffers);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, buffers[0]);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertexBuffer.Length * sizeof(float), vertexBuffer, BufferUsageHint.StaticCopy);
+            _vertexBufferObject = buffers[0];
+
+            GL.EnableVertexArrayAttrib(buffers[0], 0);
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
-            GL.EnableVertexAttribArray(0);
         }
 
         private int CompileShaders()
@@ -133,3 +147,4 @@ void main()
         }
     }
 }
+

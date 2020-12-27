@@ -2,7 +2,6 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -49,7 +48,6 @@ namespace Trl_3D.Core.Scene
                 {
                     try
                     {
-                        _logger.LogInformation($"Received {assertion.GetType().Name}");
                         _assertionProcessor.Process(assertion, sceneGraph);
                     }
                     catch (OperationCanceledException)

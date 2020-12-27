@@ -52,8 +52,8 @@ namespace Trl_3D.OpenTk
 
             _renderList.Clear();
             
-            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
-            InsertCommandInRenderOrder(new RenderTestTriagle(_logger));
+            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));            
+            InsertCommandInRenderOrder(new RenderSceneGraph(_logger, sceneGraph));
             InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
 
             foreach (var command in _renderList)
@@ -109,7 +109,10 @@ namespace Trl_3D.OpenTk
                 if (assertion.SelfDestruct)
                 {
                     _renderList.Remove(currentNode);
-                    assertion.Dispose();
+                    if (assertion is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }                    
                 }
                 currentNode = next;                
             }
@@ -119,8 +122,12 @@ namespace Trl_3D.OpenTk
         {
             foreach (var assertion in _renderList)
             {
-                assertion.Dispose();
+                if (assertion is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
+            _logger.LogInformation("Render commands disposed");
         }
     }
 }

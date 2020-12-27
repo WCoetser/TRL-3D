@@ -44,6 +44,10 @@ namespace Trl_3D.SampleApp
                     {
                         ProcessUserEvent(userInputEvent);
                     }
+                    else
+                    {
+                        _logger.LogWarning($"Unknown event type {currenEvent.GetType().FullName}");
+                    }
                 }
                 catch (OperationCanceledException)
                 {

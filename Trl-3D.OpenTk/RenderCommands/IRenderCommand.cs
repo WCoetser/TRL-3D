@@ -3,7 +3,7 @@ using Trl_3D.Core.Abstractions;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
-    public interface IRenderCommand : IDisposable
+    public interface IRenderCommand
     {
         /// <summary>
         /// When to perform the render step.

@@ -23,19 +23,41 @@ namespace Trl_3D.SampleApp
 
         public async Task StartAssertionProducer()
         {
-            var batch = new AssertionBatch
+            var batch1 = new AssertionBatch
             {
                 Assertions = new IAssertion[]
                 {
+                    // will always execute at the start of the render loop
                     new ClearColor(0.1f, 0.1f, 0.2f),
-                    new RenderTestTriagle(),
+                    // will always execute at the end of the render loop
                     new GrabScreenshot()
                 }
             };
-
-            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch, _cancellationTokenManager.CancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.CancellationToken);
+                       
+            var batch2 = new AssertionBatch
+            {
+                // TODO: Use IDs to cater for external integration, display indices
+                Assertions = new IAssertion[]
+                {
+                    // Top
+                    new Vertex(0, new (-0.25f, 0.0f, 0.0f)),
+                    new Vertex(1, new (0.25f, 0.0f, 0.0f)),
+                    new Vertex(2, new (0.0f,  0.25f, 0.0f)),
+                    new Triangle(3, (0, 1, 2)),
             
-            // TODO: Remove this when implementing differential rendering
+                    // Bottom right
+                    new Vertex(4, new (0.5f, -0.25f, 0.0f)),
+                    new Vertex(5, new (0.0f, -0.25f, 0.0f)),
+                    new Triangle(6, (4, 5, 1)), // note - vertices re-used
+
+                    // Bottom left
+                    new Vertex(7, new (-0.5f, -0.25f, 0.0f)),
+                    new Triangle(8, (5, 7, 0)), // note - vertices re-used
+                }
+            };
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch2, _cancellationTokenManager.CancellationToken);
+
             _scene.AssertionUpdatesChannel.Writer.Complete();
 
             _logger.LogInformation("Scene assertion producer stopped.");

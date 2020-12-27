@@ -1,6 +1,7 @@
 ﻿using Trl_3D.Core.Abstractions;
 
 using OpenTK.Graphics.OpenGL4;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -8,19 +9,14 @@ namespace Trl_3D.OpenTk.RenderCommands
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.BeforeContent;
 
-        private readonly float[] _clearColor;
+        private readonly ColorRgb _clearColor;
 
-        public ClearColor(float[] rgbColor)
+        public ClearColor(ColorRgb rgbColor)
         {
             _clearColor = rgbColor;
         }
 
         public bool SelfDestruct => false;
-
-        public void Dispose()
-        {
-            // Nothing to dispose
-        }
 
         public void Render(RenderInfo renderInfo)
         {
@@ -30,7 +26,7 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         public void SetState()
         {
-            GL.ClearColor(_clearColor[0], _clearColor[1], _clearColor[2], 1.0f);
+            GL.ClearColor(_clearColor.Red, _clearColor.Green, _clearColor.Blue, 1.0f);
         }
     }
 }
