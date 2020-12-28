@@ -34,13 +34,16 @@ namespace Trl_3D.OpenTk.RenderCommands
 #version 450 core
 
 layout (location = 0) in float vertexIdIn;
-layout (location = 1) in vec3 vertexPosition;
+layout (location = 1) in float surfaceIdIn;
+layout (location = 2) in vec3 vertexPosition;
 
 out float vertexId;
+out float surfaceId;
 
 void main()
 {
     vertexId = vertexIdIn;
+    surfaceId = surfaceIdIn;
     gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
@@ -49,16 +52,17 @@ void main()
 #version 450 core
 
 in float vertexId;
+in float surfaceId;
 
 out vec4 pixelColourOut;
 
 void main()
 {
-    if (vertexId < 3.0) 
+    if (surfaceId == 3.0) 
     {
         pixelColourOut = vec4(1.0f, 0.0f, 0.0f, 1.0f);
     }
-    else if (3.0 <= vertexId && vertexId < 6.0)
+    else if (surfaceId == 6.0)
     {
         pixelColourOut = vec4(0.0f, 1.0f, 0.0f, 1.0f);
     }
@@ -78,33 +82,50 @@ void main()
             GL.DrawArrays(PrimitiveType.Triangles, 0, _triangleCount * 3);
         }
 
+        public void CheckFloatValue(ulong vIn)
+        {
+            float f = vIn;
+            if ((ulong)f != vIn)
+            {
+                // TODO
+                throw new System.Exception($"Unable to represent vertex ID {vIn} as float");
+            }
+        }
+
         public void SetState()
         {   
             _program = CompileShaders();
 
             // Load triangles into render buffer for batch rendering
-            const int componentsPerVertex = 4; // 3D location + vertex ID
+            const int componentsPerVertex = 5; // 3D location + vertex ID + surface ID
             const int verticesPerTriangle = 3;
             var readyListCount = _sceneGraph.GetCompleteTriangles().Count();
             var vertexBuffer = new float[readyListCount * componentsPerVertex * verticesPerTriangle];
             int position = 0;
             _triangleCount = 0;
 
-            int vertexId = 0;
-
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
+                var vertices = triangle.GetVertices();
+
                 void loadVertexPosition(Vertex v)
                 {
-                    vertexBuffer[position++] = vertexId++;
+                    CheckFloatValue(v.ObjectId);
+                    CheckFloatValue(triangle.ObjectId);
+
+                    float vertexId = v.ObjectId;
+                    float surfaceId = triangle.ObjectId;
+
+                    vertexBuffer[position++] = vertexId;
+                    vertexBuffer[position++] = surfaceId;
                     vertexBuffer[position++] = v.Coordinates.X;
                     vertexBuffer[position++] = v.Coordinates.Y;
                     vertexBuffer[position++] = v.Coordinates.Z;
                 };
                 
-                loadVertexPosition(triangle.v1);
-                loadVertexPosition(triangle.v2);
-                loadVertexPosition(triangle.v3);
+                loadVertexPosition(vertices.Item1);
+                loadVertexPosition(vertices.Item2);
+                loadVertexPosition(vertices.Item3);
 
                 _triangleCount++;
             }
@@ -127,10 +148,15 @@ void main()
             GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexId);
             GL.VertexAttribPointer(layout_pos_vertexId, 3, VertexAttribPointerType.Float, false, stride, 0);
 
+            // Surface ID
+            const int layout_pos_surfaceId = 1;
+            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_surfaceId);
+            GL.VertexAttribPointer(layout_pos_surfaceId, 3, VertexAttribPointerType.Float, false, stride, sizeof(float));
+
             // Vertex position
-            const int layout_pos_vertexPosition = 1;
+            const int layout_pos_vertexPosition = 2;
             GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexPosition);
-            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, sizeof(float)); // Note: offset is in bytes
+            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, sizeof(float) + sizeof(float));
         }
 
         private int CompileShaders()

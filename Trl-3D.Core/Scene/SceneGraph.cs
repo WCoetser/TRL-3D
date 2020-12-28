@@ -16,24 +16,18 @@ namespace Trl_3D.Core.Scene
             Vertices = new Dictionary<ulong, Vertex>();
         }
 
-        public IEnumerable<(Vertex v1, Vertex v2, Vertex v3)> GetCompleteTriangles()
+        public IEnumerable<Triangle> GetCompleteTriangles()
         {
-            foreach (var triangle in Triangles
-                .Where(pair => IsTriangleReady(pair.Key))
-                .Select(pair => pair.Value))
-            {
-                yield return (Vertices[triangle.Vertices.VertexId1],
-                        Vertices[triangle.Vertices.VertexId2],
-                        Vertices[triangle.Vertices.VertexId3]);
-            }
+            return Triangles.Where(pair => IsTriangleReady(pair.Key))
+                .Select(pair => pair.Value);
         }
 
         private bool IsTriangleReady(ulong triangleId)
         {
             return Triangles.TryGetValue(triangleId, out Triangle triangle)
-                && Vertices.ContainsKey(triangle.Vertices.VertexId1)
-                && Vertices.ContainsKey(triangle.Vertices.VertexId2)
-                && Vertices.ContainsKey(triangle.Vertices.VertexId3);
+                && Vertices.ContainsKey(triangle.VertexIds.VertexId1)
+                && Vertices.ContainsKey(triangle.VertexIds.VertexId2)
+                && Vertices.ContainsKey(triangle.VertexIds.VertexId3);
         }
     }
 }

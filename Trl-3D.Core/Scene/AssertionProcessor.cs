@@ -17,11 +17,11 @@ namespace Trl_3D.Core.Scene
             }
             else if (assertion is Assertions.Vertex vertex)
             {
-                sceneGraph.Vertices[vertex.vertexId] = new Vertex { Coordinates = vertex.Coordinates };
+                sceneGraph.Vertices[vertex.vertexId] = new Vertex(sceneGraph, vertex.vertexId) { Coordinates = vertex.Coordinates };
             }
             else if (assertion is Assertions.Triangle triangle)
             {
-                sceneGraph.Triangles[triangle.triangleId] = new Triangle { Vertices = triangle.VertexIds };
+                sceneGraph.Triangles[triangle.triangleId] = new Triangle(sceneGraph, triangle.triangleId) { VertexIds = triangle.VertexIds };
             }
             else if (assertion is GrabScreenshot grabScreenshot)
             {
