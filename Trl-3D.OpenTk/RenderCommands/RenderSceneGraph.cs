@@ -33,10 +33,14 @@ namespace Trl_3D.OpenTk.RenderCommands
 @"
 #version 450 core
 
-layout (location = 0) in vec3 vertexPosition;
+layout (location = 0) in float vertexIdIn;
+layout (location = 1) in vec3 vertexPosition;
+
+out float vertexId;
 
 void main()
 {
+    vertexId = vertexIdIn;
     gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
@@ -44,11 +48,24 @@ void main()
 @"
 #version 450 core
 
-out vec4 FragColor;
+in float vertexId;
+
+out vec4 pixelColourOut;
 
 void main()
 {
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    if (vertexId < 3.0) 
+    {
+        pixelColourOut = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    }
+    else if (3.0 <= vertexId && vertexId < 6.0)
+    {
+        pixelColourOut = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    }
+    else 
+    {
+        pixelColourOut = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    }
 } 
 ";
 
@@ -66,16 +83,20 @@ void main()
             _program = CompileShaders();
 
             // Load triangles into render buffer for batch rendering
-            const int componentsPerVertex = 3; // only 3D location for now
+            const int componentsPerVertex = 4; // 3D location + vertex ID
             const int verticesPerTriangle = 3;
             var readyListCount = _sceneGraph.GetCompleteTriangles().Count();
             var vertexBuffer = new float[readyListCount * componentsPerVertex * verticesPerTriangle];
             int position = 0;
             _triangleCount = 0;
+
+            int vertexId = 0;
+
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
                 void loadVertexPosition(Vertex v)
                 {
+                    vertexBuffer[position++] = vertexId++;
                     vertexBuffer[position++] = v.Coordinates.X;
                     vertexBuffer[position++] = v.Coordinates.Y;
                     vertexBuffer[position++] = v.Coordinates.Z;
@@ -88,7 +109,7 @@ void main()
                 _triangleCount++;
             }
 
-            var stride = componentsPerVertex * sizeof(float); // 12 bytes per row = data for one vertex position
+            var stride = componentsPerVertex * sizeof(float);
 
             var vertexArrays = new int[1];
             GL.CreateVertexArrays(1, vertexArrays);
@@ -101,8 +122,15 @@ void main()
             GL.BufferData(BufferTarget.ArrayBuffer, vertexBuffer.Length * sizeof(float), vertexBuffer, BufferUsageHint.StaticCopy);
             _vertexBufferObject = buffers[0];
 
-            GL.EnableVertexArrayAttrib(buffers[0], 0);
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
+            // Vertex ID
+            const int layout_pos_vertexId = 0;
+            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexId);
+            GL.VertexAttribPointer(layout_pos_vertexId, 3, VertexAttribPointerType.Float, false, stride, 0);
+
+            // Vertex position
+            const int layout_pos_vertexPosition = 1;
+            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexPosition);
+            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, sizeof(float)); // Note: offset is in bytes
         }
 
         private int CompileShaders()
