@@ -26,6 +26,7 @@ namespace Trl_3D.OpenTk
         
         // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
+        private bool _windowSizeChanged = false;
 
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
         {
@@ -40,16 +41,15 @@ namespace Trl_3D.OpenTk
 
         internal void ResizeRenderWindow(int width, int height)
         {
-            GL.Viewport(0, 0, width, height);
             _renderInfo.Width = width;
             _renderInfo.Height = height;
-            _logger.LogInformation($"Window resized to {width}x{height}={width*height} pixels");
+            _windowSizeChanged = true;
         }
 
         public void UpdateState(SceneGraph sceneGraph)
         {
             // TODO: Add differential rendering
-
+            
             _renderList.Clear();
             
             InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));            
@@ -94,6 +94,13 @@ namespace Trl_3D.OpenTk
         {
             _renderInfo.TotalRenderTime += timeSinceLastFrameSeconds;
             _renderInfo.FrameRate = 1.0 / timeSinceLastFrameSeconds;
+
+            if (_windowSizeChanged)
+            {
+                GL.Viewport(0, 0, _renderInfo.Width, _renderInfo.Height);
+                _windowSizeChanged = false;
+                _logger.LogInformation($"Window resized to {_renderInfo.Width}x{_renderInfo.Height}={_renderInfo.Width * _renderInfo.Height} pixels");
+            }
 
             if (!_renderList.Any())
             {
