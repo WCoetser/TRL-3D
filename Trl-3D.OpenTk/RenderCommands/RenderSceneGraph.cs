@@ -45,14 +45,14 @@ layout (location = 1) in float surfaceIdIn;
 layout (location = 2) in vec3 vertexPosition;
 layout (location = 3) in vec4 vertexColorIn;
 
-out float vertexId;
-out float surfaceId;
+out int vertexId;
+out int surfaceId;
 out vec4 vertexColor;
 
 void main()
 {
-    vertexId = vertexIdIn;
-    surfaceId = surfaceIdIn;
+    vertexId = int(vertexIdIn);
+    surfaceId = int(surfaceIdIn);
     vertexColor = vertexColorIn;
 
     gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
@@ -62,8 +62,8 @@ void main()
 @"
 #version 450 core
 
-in float vertexId;
-in float surfaceId;
+in int vertexId;
+in int surfaceId;
 in vec4 vertexColor;
 
 out vec4 pixelColorOut;
@@ -82,16 +82,6 @@ void main()
             GL.BindVertexArray(_vertexArrayObject);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer);
             GL.DrawElements(PrimitiveType.Triangles, _triangleCount * 3,DrawElementsType.UnsignedInt, 0);
-        }
-
-        public void CheckFloatValue(ulong vIn)
-        {
-            float f = vIn;
-            if ((ulong)f != vIn)
-            {
-                // TODO ... try to get an uint in there
-                throw new Exception($"Unable to represent vertex ID {vIn} as float");
-            }
         }
 
         public void SetState()
@@ -113,17 +103,11 @@ void main()
                         return vertexIndex;
                     }
 
-                    CheckFloatValue(v.ObjectId);
-                    CheckFloatValue(triangle.ObjectId);
-
-                    float vertexId = v.ObjectId;
-                    float surfaceId = triangle.ObjectId;
-
                     var vertexComponents = new ReadOnlySpan<float>(new float[]
                     {
                         // Object IDs
-                        vertexId,
-                        surfaceId,
+                        v.ObjectId,
+                        triangle.ObjectId,
                         // Coordinates
                         v.Coordinates.X,
                         v.Coordinates.Y,
