@@ -10,12 +10,14 @@ using Trl_3D.Core.Scene;
 using Trl_3D.Core.Abstractions;
 
 using OpenTK.Graphics.OpenGL4;
+using Trl_3D.OpenTk.Shaders;
 
 namespace Trl_3D.OpenTk
 {
     public class OpenGLSceneProcessor
     {
         private readonly ILogger _logger;
+        private readonly IShaderCompiler _shaderCompiler;
         private readonly IServiceProvider _serviceProvider;
         private readonly IRenderWindow _renderWindow;
         private readonly ICancellationTokenManager _cancellationTokenManager;
@@ -26,13 +28,14 @@ namespace Trl_3D.OpenTk
         
         // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
-        private bool _windowSizeChanged = false;
+        private bool _windowSizeChanged;
 
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
         {
             _serviceProvider = serviceProvider;
             _cancellationTokenManager = _serviceProvider.GetRequiredService<ICancellationTokenManager>();
             _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
+            _shaderCompiler = _serviceProvider.GetRequiredService<IShaderCompiler>();
 
             _renderWindow = renderWindow; // This cannot be passed via the service provider otherwise there will be a cycle in the DI graph
             _renderList = new LinkedList<IRenderCommand>();
@@ -53,7 +56,7 @@ namespace Trl_3D.OpenTk
             _renderList.Clear();
             
             InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));            
-            InsertCommandInRenderOrder(new RenderSceneGraph(_logger, sceneGraph));
+            InsertCommandInRenderOrder(new RenderSceneGraph(_logger, _shaderCompiler, sceneGraph));
             InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
 
             foreach (var command in _renderList)

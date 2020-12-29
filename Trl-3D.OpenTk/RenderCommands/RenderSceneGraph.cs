@@ -4,8 +4,10 @@ using OpenTK.Graphics.OpenGL4;
 
 using Microsoft.Extensions.Logging;
 using Trl_3D.Core.Scene;
-using System.Linq;
 using System.Collections.Generic;
+using Trl_3D.OpenTk.Shaders;
+using System.Buffers;
+using System;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -17,20 +19,23 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         private readonly ILogger _logger;
         private readonly SceneGraph _sceneGraph;
+        private readonly IShaderCompiler _shaderCompiler;
         private int _vertexArrayObject;
         private int _vertexBufferObject;
         private int _vertexIndexBuffer;
+        private int _triangleCount;
 
-        public RenderSceneGraph(ILogger logger, SceneGraph sceneGraph)
+        public RenderSceneGraph(ILogger logger, IShaderCompiler shaderCompiler, SceneGraph sceneGraph)
         {
             _logger = logger;
             _sceneGraph = sceneGraph;
+            _shaderCompiler = shaderCompiler;
         }
 
         #region Shaders
 
-        private int _program;
-        private int _triangleCount;
+        private ShaderProgram _shaderProgram;
+
         const string vertexShaderCode =
 @"
 #version 450 core
@@ -73,7 +78,7 @@ void main()
 
         public void Render(RenderInfo info)
         {
-            GL.UseProgram(_program);
+            GL.UseProgram(_shaderProgram.ProgramId);
             GL.BindVertexArray(_vertexArrayObject);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer);
             GL.DrawElements(PrimitiveType.Triangles, _triangleCount * 3,DrawElementsType.UnsignedInt, 0);
@@ -85,33 +90,23 @@ void main()
             if ((ulong)f != vIn)
             {
                 // TODO ... try to get an uint in there
-                throw new System.Exception($"Unable to represent vertex ID {vIn} as float");
+                throw new Exception($"Unable to represent vertex ID {vIn} as float");
             }
         }
 
         public void SetState()
         {   
-            _program = CompileShaders();
+            _shaderProgram = _shaderCompiler.Compile(vertexShaderCode, fragmentShaderCode);
 
             // Load triangles into render buffer for batch rendering
             const int componentsPerVertex = 9; // 3D location + vertex ID + surface ID + 4 component colour
-            const int verticesPerTriangle = 3;            
-            
-            _triangleCount = _sceneGraph.GetCompleteTriangles().Count();            
-            var vertexBuffer = new float[_triangleCount * componentsPerVertex * verticesPerTriangle];
+                     
+            Dictionary<ulong, uint> vertexIdToIndex = new Dictionary<ulong, uint>();            
+            var vertexIndexBufferWriter = new ArrayBufferWriter<uint>();
 
-            _logger.LogInformation($"Vertex buffer size = {vertexBuffer.Length * sizeof(float)} bytes");
-            if (_triangleCount != _sceneGraph.Triangles.Count)
-            {
-                _logger.LogWarning($"Some triangles have missing vertices and will not be rendered.");
-            }
-           
-            Dictionary<ulong, uint> vertexIdToIndex = new Dictionary<ulong, uint>();
-            var vertexIndexBuffer = new uint[_triangleCount * 3];
-            _logger.LogInformation($"Vertex index buffer size = {vertexIndexBuffer.Length * sizeof(uint)} bytes");
+            var vertexBufferWriter = new ArrayBufferWriter<float>();
+            var stride = componentsPerVertex * sizeof(float);
 
-            int vertexBufferPosition = 0;
-            int indexBufferPosition = 0;
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
                 var vertices = triangle.GetVertices();
@@ -129,29 +124,40 @@ void main()
                     float vertexId = v.ObjectId;
                     float surfaceId = triangle.ObjectId;
 
-                    vertexBuffer[vertexBufferPosition++] = vertexId;
-                    vertexBuffer[vertexBufferPosition++] = surfaceId;
-
-                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.X;
-                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.Y;
-                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.Z;
-
-                    vertexBuffer[vertexBufferPosition++] = v.Color?.Red ?? 1.0f;
-                    vertexBuffer[vertexBufferPosition++] = v.Color?.Green ?? 1.0f;
-                    vertexBuffer[vertexBufferPosition++] = v.Color?.Blue ?? 1.0f;
-                    vertexBuffer[vertexBufferPosition++] = v.Color?.Opacity ?? 1.0f;
+                    var vertexComponents = new ReadOnlySpan<float>(new float[]
+                    {
+                        // Object IDs
+                        vertexId,
+                        surfaceId,
+                        // Coordinates
+                        v.Coordinates.X,
+                        v.Coordinates.Y,
+                        v.Coordinates.Z,
+                        // Colour
+                        v.Color?.Red ?? 1.0f,
+                        v.Color?.Green ?? 1.0f,
+                        v.Color?.Blue ?? 1.0f,
+                        v.Color?.Opacity ?? 1.0f
+                    });
+                    vertexBufferWriter.Write(vertexComponents);
 
                     var retIndex = (uint)vertexIdToIndex.Count;
                     vertexIdToIndex[v.ObjectId] = retIndex;
                     return retIndex;
-                };                
-                
-                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item1);
-                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item2);
-                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item3);
+                };
+
+                var indices = new ReadOnlySpan<uint>(new uint[]
+                {
+                    loadVertexPosition(vertices.Item1),
+                    loadVertexPosition(vertices.Item2),
+                    loadVertexPosition(vertices.Item3)
+                });
+                vertexIndexBufferWriter.Write(indices);
+
+                _triangleCount++;
             }
 
-            var stride = componentsPerVertex * sizeof(float);
+            var vertexBuffer = vertexBufferWriter.WrittenMemory.ToArray();
 
             var vertexArrays = new int[1];
             GL.CreateVertexArrays(1, vertexArrays);
@@ -185,50 +191,25 @@ void main()
             GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
 
             // Vertex index buffer for triangles    
+            var vertexIndexBuffer = vertexIndexBufferWriter.WrittenMemory.ToArray();
             var indexBuffers = new int[1];
             GL.CreateBuffers(1, indexBuffers);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffers[0]);
             GL.BufferData(BufferTarget.ElementArrayBuffer, vertexIndexBuffer.Length * sizeof(uint), vertexIndexBuffer, BufferUsageHint.StaticDraw);
             _vertexIndexBuffer = indexBuffers[0];
-        }
 
-        private int CompileShaders()
-        {
-            var vertexShader = GL.CreateShader(ShaderType.VertexShader);
-            GL.ShaderSource(vertexShader, vertexShaderCode);
-            GL.CompileShader(vertexShader);
-
-            var info = GL.GetShaderInfoLog(vertexShader);
-            if (!string.IsNullOrWhiteSpace(info))
-                _logger.LogError($"Vertex shader compilation: {info}");
-
-            var fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-            GL.ShaderSource(fragmentShader, fragmentShaderCode);
-            GL.CompileShader(fragmentShader);
-
-            info = GL.GetShaderInfoLog(fragmentShader);
-            if (!string.IsNullOrWhiteSpace(info))
-                _logger.LogError($"Vertex shader compilation: {info}");
-
-            var program = GL.CreateProgram();
-            GL.AttachShader(program, vertexShader);
-            GL.AttachShader(program, fragmentShader);
-            GL.LinkProgram(program);
-
-            info = GL.GetProgramInfoLog(program);
-            if (!string.IsNullOrWhiteSpace(info))
-                _logger.LogError($"Shared linking information: {info}");
-
-            GL.DetachShader(program, vertexShader);
-            GL.DetachShader(program, fragmentShader);
-            GL.DeleteShader(vertexShader);
-            GL.DeleteShader(fragmentShader);
-            return program;
+            // Log stats
+            _logger.LogInformation($"Vertex buffer size = {vertexBuffer.Length * sizeof(float)} bytes");
+            _logger.LogInformation($"Vertex index buffer size = {vertexIndexBuffer.Length * sizeof(uint)} bytes");
+            if (_triangleCount != _sceneGraph.Triangles.Count)
+            {
+                _logger.LogWarning($"Some triangles have missing vertices and will not be rendered.");
+            }
         }
 
         public void Dispose()
         {
-            GL.DeleteProgram(_program);
+            _shaderProgram?.Dispose();
             GL.DeleteVertexArrays(1, ref _vertexArrayObject);
             GL.DeleteBuffer(_vertexBufferObject);
             GL.DeleteBuffer(_vertexIndexBuffer);
