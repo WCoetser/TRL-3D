@@ -36,14 +36,18 @@ namespace Trl_3D.OpenTk.RenderCommands
 layout (location = 0) in float vertexIdIn;
 layout (location = 1) in float surfaceIdIn;
 layout (location = 2) in vec3 vertexPosition;
+layout (location = 3) in vec4 vertexColorIn;
 
 out float vertexId;
 out float surfaceId;
+out vec4 vertexColor;
 
 void main()
 {
     vertexId = vertexIdIn;
     surfaceId = surfaceIdIn;
+    vertexColor = vertexColorIn;
+
     gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
@@ -53,23 +57,13 @@ void main()
 
 in float vertexId;
 in float surfaceId;
+in vec4 vertexColor;
 
-out vec4 pixelColourOut;
+out vec4 pixelColorOut;
 
 void main()
-{
-    if (surfaceId == 3.0) 
-    {
-        pixelColourOut = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    }
-    else if (surfaceId == 6.0)
-    {
-        pixelColourOut = vec4(0.0f, 1.0f, 0.0f, 1.0f);
-    }
-    else 
-    {
-        pixelColourOut = vec4(0.0f, 0.0f, 1.0f, 1.0f);
-    }
+{    
+    pixelColorOut = vertexColor;
 } 
 ";
 
@@ -97,7 +91,7 @@ void main()
             _program = CompileShaders();
 
             // Load triangles into render buffer for batch rendering
-            const int componentsPerVertex = 5; // 3D location + vertex ID + surface ID
+            const int componentsPerVertex = 9; // 3D location + vertex ID + surface ID + 4 component colour
             const int verticesPerTriangle = 3;
             var readyListCount = _sceneGraph.GetCompleteTriangles().Count();
             var vertexBuffer = new float[readyListCount * componentsPerVertex * verticesPerTriangle];
@@ -118,9 +112,15 @@ void main()
 
                     vertexBuffer[position++] = vertexId;
                     vertexBuffer[position++] = surfaceId;
+
                     vertexBuffer[position++] = v.Coordinates.X;
                     vertexBuffer[position++] = v.Coordinates.Y;
                     vertexBuffer[position++] = v.Coordinates.Z;
+
+                    vertexBuffer[position++] = v.Color?.Red ?? 1.0f;
+                    vertexBuffer[position++] = v.Color?.Green ?? 1.0f;
+                    vertexBuffer[position++] = v.Color?.Blue ?? 1.0f;
+                    vertexBuffer[position++] = v.Color?.Opacity ?? 1.0f;
                 };
                 
                 loadVertexPosition(vertices.Item1);
@@ -156,7 +156,12 @@ void main()
             // Vertex position
             const int layout_pos_vertexPosition = 2;
             GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexPosition);
-            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, sizeof(float) + sizeof(float));
+            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2* sizeof(float));
+
+            // Vertex colour
+            const int layout_pos_vertexColor = 3;
+            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexColor);
+            GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
         }
 
         private int CompileShaders()

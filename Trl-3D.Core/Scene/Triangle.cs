@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using Trl_3D.Core.Abstractions;
-
-namespace Trl_3D.Core.Scene
+﻿namespace Trl_3D.Core.Scene
 {
     public class Triangle : SceneGraphObjectBase
     {

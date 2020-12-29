@@ -1,4 +1,6 @@
-﻿namespace Trl_3D.Core.Scene
+﻿using Trl_3D.Core.Assertions;
+
+namespace Trl_3D.Core.Scene
 {
     public class Vertex : SceneGraphObjectBase
     {
@@ -7,5 +9,7 @@
         }
 
         public Coordinate3d Coordinates { get; set; }
+
+        public ColorRgba Color { get; set; }
     }
 }

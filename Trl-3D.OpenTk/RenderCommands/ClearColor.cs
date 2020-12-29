@@ -1,7 +1,7 @@
 ﻿using Trl_3D.Core.Abstractions;
 
 using OpenTK.Graphics.OpenGL4;
-using Trl_3D.Core.Scene;
+using Trl_3D.Core.Assertions;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -9,9 +9,9 @@ namespace Trl_3D.OpenTk.RenderCommands
     {
         public RenderProcessPosition ProcessStep => RenderProcessPosition.BeforeContent;
 
-        private readonly ColorRgb _clearColor;
+        private readonly ColorRgba _clearColor;
 
-        public ClearColor(ColorRgb rgbColor)
+        public ClearColor(ColorRgba rgbColor)
         {
             _clearColor = rgbColor;
         }

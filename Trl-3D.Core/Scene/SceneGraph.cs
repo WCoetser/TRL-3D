@@ -1,17 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Trl_3D.Core.Assertions;
 
 namespace Trl_3D.Core.Scene
 {
     public class SceneGraph
     {
-        public ColorRgb RgbClearColor { get; set; }
+        public ColorRgba RgbClearColor { get; set; }
         public Dictionary<ulong, Vertex> Vertices { get; private set; }        
         public Dictionary<ulong, Triangle> Triangles { get; private set; }
 
         public SceneGraph()
         {
-            RgbClearColor = new (1.0f, 1.0f, 1.0f);
+            RgbClearColor = new (0.0f, 0.0f, 0.0f, 1.0f);
             Triangles = new Dictionary<ulong, Triangle>();
             Vertices = new Dictionary<ulong, Vertex>();
         }

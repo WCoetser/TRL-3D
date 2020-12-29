@@ -13,15 +13,26 @@ namespace Trl_3D.Core.Scene
         {
             if (assertion is ClearColor clearColor)
             {
-                sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue);
+                sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
             }
-            else if (assertion is Assertions.Vertex vertex)
+            else if (assertion is Assertions.Vertex assertionVertex)
             {
-                sceneGraph.Vertices[vertex.vertexId] = new Vertex(sceneGraph, vertex.vertexId) { Coordinates = vertex.Coordinates };
+                if (!sceneGraph.Vertices.TryGetValue(assertionVertex.VertexId, out Vertex vertex)) {
+                    vertex = new Vertex(sceneGraph, assertionVertex.VertexId);
+                    sceneGraph.Vertices[assertionVertex.VertexId] = vertex;
+                }
+                if (assertionVertex.Coordinates != default)
+                {
+                    vertex.Coordinates = assertionVertex.Coordinates;
+                }
+                if (assertionVertex.Color != default)
+                {
+                    vertex.Color = assertionVertex.Color;
+                }
             }
             else if (assertion is Assertions.Triangle triangle)
             {
-                sceneGraph.Triangles[triangle.triangleId] = new Triangle(sceneGraph, triangle.triangleId) { VertexIds = triangle.VertexIds };
+                sceneGraph.Triangles[triangle.TriangleId] = new Triangle(sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
             }
             else if (assertion is GrabScreenshot grabScreenshot)
             {
