@@ -5,6 +5,7 @@ using OpenTK.Graphics.OpenGL4;
 using Microsoft.Extensions.Logging;
 using Trl_3D.Core.Scene;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -18,6 +19,7 @@ namespace Trl_3D.OpenTk.RenderCommands
         private readonly SceneGraph _sceneGraph;
         private int _vertexArrayObject;
         private int _vertexBufferObject;
+        private int _vertexIndexBuffer;
 
         public RenderSceneGraph(ILogger logger, SceneGraph sceneGraph)
         {
@@ -73,7 +75,8 @@ void main()
         {
             GL.UseProgram(_program);
             GL.BindVertexArray(_vertexArrayObject);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, _triangleCount * 3);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer);
+            GL.DrawElements(PrimitiveType.Triangles, _triangleCount * 3,DrawElementsType.UnsignedInt, 0);
         }
 
         public void CheckFloatValue(ulong vIn)
@@ -81,7 +84,7 @@ void main()
             float f = vIn;
             if ((ulong)f != vIn)
             {
-                // TODO
+                // TODO ... try to get an uint in there
                 throw new System.Exception($"Unable to represent vertex ID {vIn} as float");
             }
         }
@@ -92,42 +95,60 @@ void main()
 
             // Load triangles into render buffer for batch rendering
             const int componentsPerVertex = 9; // 3D location + vertex ID + surface ID + 4 component colour
-            const int verticesPerTriangle = 3;
-            var readyListCount = _sceneGraph.GetCompleteTriangles().Count();
-            var vertexBuffer = new float[readyListCount * componentsPerVertex * verticesPerTriangle];
-            int position = 0;
-            _triangleCount = 0;
+            const int verticesPerTriangle = 3;            
+            
+            _triangleCount = _sceneGraph.GetCompleteTriangles().Count();            
+            var vertexBuffer = new float[_triangleCount * componentsPerVertex * verticesPerTriangle];
 
+            _logger.LogInformation($"Vertex buffer size = {vertexBuffer.Length * sizeof(float)} bytes");
+            if (_triangleCount != _sceneGraph.Triangles.Count)
+            {
+                _logger.LogWarning($"Some triangles have missing vertices and will not be rendered.");
+            }
+           
+            Dictionary<ulong, uint> vertexIdToIndex = new Dictionary<ulong, uint>();
+            var vertexIndexBuffer = new uint[_triangleCount * 3];
+            _logger.LogInformation($"Vertex index buffer size = {vertexIndexBuffer.Length * sizeof(uint)} bytes");
+
+            int vertexBufferPosition = 0;
+            int indexBufferPosition = 0;
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
                 var vertices = triangle.GetVertices();
 
-                void loadVertexPosition(Vertex v)
+                uint loadVertexPosition(Vertex v)
                 {
+                    if (vertexIdToIndex.TryGetValue(v.ObjectId, out uint vertexIndex))
+                    {
+                        return vertexIndex;
+                    }
+
                     CheckFloatValue(v.ObjectId);
                     CheckFloatValue(triangle.ObjectId);
 
                     float vertexId = v.ObjectId;
                     float surfaceId = triangle.ObjectId;
 
-                    vertexBuffer[position++] = vertexId;
-                    vertexBuffer[position++] = surfaceId;
+                    vertexBuffer[vertexBufferPosition++] = vertexId;
+                    vertexBuffer[vertexBufferPosition++] = surfaceId;
 
-                    vertexBuffer[position++] = v.Coordinates.X;
-                    vertexBuffer[position++] = v.Coordinates.Y;
-                    vertexBuffer[position++] = v.Coordinates.Z;
+                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.X;
+                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.Y;
+                    vertexBuffer[vertexBufferPosition++] = v.Coordinates.Z;
 
-                    vertexBuffer[position++] = v.Color?.Red ?? 1.0f;
-                    vertexBuffer[position++] = v.Color?.Green ?? 1.0f;
-                    vertexBuffer[position++] = v.Color?.Blue ?? 1.0f;
-                    vertexBuffer[position++] = v.Color?.Opacity ?? 1.0f;
-                };
+                    vertexBuffer[vertexBufferPosition++] = v.Color?.Red ?? 1.0f;
+                    vertexBuffer[vertexBufferPosition++] = v.Color?.Green ?? 1.0f;
+                    vertexBuffer[vertexBufferPosition++] = v.Color?.Blue ?? 1.0f;
+                    vertexBuffer[vertexBufferPosition++] = v.Color?.Opacity ?? 1.0f;
+
+                    var retIndex = (uint)vertexIdToIndex.Count;
+                    vertexIdToIndex[v.ObjectId] = retIndex;
+                    return retIndex;
+                };                
                 
-                loadVertexPosition(vertices.Item1);
-                loadVertexPosition(vertices.Item2);
-                loadVertexPosition(vertices.Item3);
-
-                _triangleCount++;
+                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item1);
+                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item2);
+                vertexIndexBuffer[indexBufferPosition++] = loadVertexPosition(vertices.Item3);
             }
 
             var stride = componentsPerVertex * sizeof(float);
@@ -156,12 +177,19 @@ void main()
             // Vertex position
             const int layout_pos_vertexPosition = 2;
             GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexPosition);
-            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2* sizeof(float));
+            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2 * sizeof(float));
 
             // Vertex colour
             const int layout_pos_vertexColor = 3;
             GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexColor);
             GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
+
+            // Vertex index buffer for triangles    
+            var indexBuffers = new int[1];
+            GL.CreateBuffers(1, indexBuffers);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffers[0]);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, vertexIndexBuffer.Length * sizeof(uint), vertexIndexBuffer, BufferUsageHint.StaticDraw);
+            _vertexIndexBuffer = indexBuffers[0];
         }
 
         private int CompileShaders()
@@ -203,6 +231,7 @@ void main()
             GL.DeleteProgram(_program);
             GL.DeleteVertexArrays(1, ref _vertexArrayObject);
             GL.DeleteBuffer(_vertexBufferObject);
+            GL.DeleteBuffer(_vertexIndexBuffer);
         }
     }
 }

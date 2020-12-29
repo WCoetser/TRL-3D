@@ -4,7 +4,6 @@ using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Abstractions;
 
 using System.Threading.Tasks;
-//using Trl_3D.Core.Scene;
 
 namespace Trl_3D.SampleApp
 {
