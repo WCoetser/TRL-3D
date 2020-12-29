@@ -97,15 +97,10 @@ void main()
         public void SetState()
         {   
             _shaderProgram = _shaderCompiler.Compile(vertexShaderCode, fragmentShaderCode);
-
-            // Load triangles into render buffer for batch rendering
-            const int componentsPerVertex = 9; // 3D location + vertex ID + surface ID + 4 component colour
-                     
+                                 
             Dictionary<ulong, uint> vertexIdToIndex = new Dictionary<ulong, uint>();            
             var vertexIndexBufferWriter = new ArrayBufferWriter<uint>();
-
             var vertexBufferWriter = new ArrayBufferWriter<float>();
-            var stride = componentsPerVertex * sizeof(float);
 
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
@@ -156,6 +151,9 @@ void main()
 
                 _triangleCount++;
             }
+
+            const int componentsPerVertex = 9; // 3D location + vertex ID + surface ID + 4 component colour
+            var stride = componentsPerVertex * sizeof(float);
 
             var vertexBuffer = vertexBufferWriter.WrittenMemory.ToArray();
 
