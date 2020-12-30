@@ -9,12 +9,14 @@ namespace Trl_3D.Core.Scene
         public ColorRgba RgbClearColor { get; set; }
         public Dictionary<ulong, Vertex> Vertices { get; private set; }        
         public Dictionary<ulong, Triangle> Triangles { get; private set; }
+        public Dictionary<ulong, Texture> Textures { get; private set; }
 
         public SceneGraph()
         {
             RgbClearColor = new (0.0f, 0.0f, 0.0f, 1.0f);
             Triangles = new Dictionary<ulong, Triangle>();
             Vertices = new Dictionary<ulong, Vertex>();
+            Textures = new Dictionary<ulong, Texture>();
         }
 
         public IEnumerable<Triangle> GetCompleteTriangles()

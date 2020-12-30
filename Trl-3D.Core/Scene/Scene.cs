@@ -20,12 +20,13 @@ namespace Trl_3D.Core.Scene
 
         public Scene(ILogger<Scene> logger,
                      IRenderWindow renderWindow,
-                     ICancellationTokenManager cancellationTokenManager)
+                     ICancellationTokenManager cancellationTokenManager,
+                     AssertionProcessor assertionProcessor)
         {
             _logger = logger;
             _renderWindow = renderWindow;
             _cancellationTokenManager = cancellationTokenManager;
-            _assertionProcessor = new AssertionProcessor();
+            _assertionProcessor = assertionProcessor;
 
             AssertionUpdatesChannel = Channel.CreateUnbounded<AssertionBatch>();
 
@@ -48,7 +49,7 @@ namespace Trl_3D.Core.Scene
                 {
                     try
                     {
-                        _assertionProcessor.Process(assertion, sceneGraph);
+                        await _assertionProcessor.Process(assertion, sceneGraph);
                     }
                     catch (OperationCanceledException)
                     {

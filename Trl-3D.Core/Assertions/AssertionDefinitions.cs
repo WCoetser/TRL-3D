@@ -10,7 +10,5 @@ namespace Trl_3D.Core.Assertions
 
     public record Triangle(ulong TriangleId, (ulong Point1Id, ulong Point2Id, ulong Point3Id) VertexIds) : IAssertion;
 
-    public record ColorRgba(float Red, float Green, float Blue, float Opacity);
-
-    public record Coordinate3d(float X, float Y, float Z);
+    public record Texture(ulong TextureId, string Uri) : IAssertion;
 }

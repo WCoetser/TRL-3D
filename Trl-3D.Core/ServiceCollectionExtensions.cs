@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Trl_3D.Core.Abstractions;
+using Trl_3D.Core.Scene;
 using Trl_3D.Core.Threading;
 
 namespace Trl_3D.Core
@@ -10,6 +11,7 @@ namespace Trl_3D.Core
         {
             serviceCollection.AddSingleton<IScene, Scene.Scene>();
             serviceCollection.AddSingleton<ICancellationTokenManager, CancellationTokenManager>();
+            serviceCollection.AddSingleton<AssertionProcessor>();
         }
     }
 }

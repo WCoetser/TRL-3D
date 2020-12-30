@@ -4,6 +4,8 @@ using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Abstractions;
 
 using System.Threading.Tasks;
+using System;
+using System.IO;
 
 namespace Trl_3D.SampleApp
 {
@@ -34,7 +36,17 @@ namespace Trl_3D.SampleApp
                 }
             };
             await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.CancellationToken);
-                       
+                        
+            FileInfo currentLocation = new FileInfo(typeof(SceneLoader).Assembly.Location);
+            string image = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail.jpg";
+            var images = new AssertionBatch
+            {
+                Assertions = new IAssertion [] {
+                    new Texture(100, image)
+                }
+            };
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(images, _cancellationTokenManager.CancellationToken);
+
             var batch2 = new AssertionBatch
             {
                 // TODO: Use IDs to cater for external integration, display indices

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 
@@ -6,10 +7,17 @@ namespace Trl_3D.Core.Scene
 {
     public class AssertionProcessor
     {
+        private IImageLoader _imageLoader;
+
+        public AssertionProcessor(IImageLoader imageLoader)
+        {
+            _imageLoader = imageLoader;
+        }
+
         /// <summary>
         /// Updates the scenegraph with the information from the assertion.
         /// </summary>
-        public void Process(IAssertion assertion, SceneGraph sceneGraph)
+        public async Task Process(IAssertion assertion, SceneGraph sceneGraph)
         {
             if (assertion is ClearColor clearColor)
             {
@@ -38,9 +46,16 @@ namespace Trl_3D.Core.Scene
             {
                 // Nothing to do here, screenshots passed out to event processor via render window event channel
             }
+            else if (assertion is Assertions.Texture texture)
+            {
+                // Pre-load texture to avoid doing this in the function setting OpenGL state
+                var loadedImage = await _imageLoader.LoadImage(new Uri(texture.Uri));
+                sceneGraph.Textures[texture.TextureId] = new Texture(sceneGraph, texture.TextureId, loadedImage.BufferRgba, 
+                    loadedImage.Width, loadedImage.Height);
+            }
             else
             {
-                throw new ArgumentException("Unknown assertion type");
+                throw new ArgumentException($"Unknown assertion type: {assertion.GetType()}");
             }
         }
     }

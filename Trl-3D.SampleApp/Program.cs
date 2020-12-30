@@ -118,6 +118,7 @@ namespace Trl_3D.SampleApp
 
             services.AddSingleton<IAssertionLoader, SceneLoader>();
             services.AddSingleton<IEventProcessor, EventProcessor>();
+            services.AddSingleton<IImageLoader, ImageLoader>();
         }
     }
 }

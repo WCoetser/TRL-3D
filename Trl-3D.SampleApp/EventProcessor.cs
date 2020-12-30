@@ -2,16 +2,14 @@
 
 using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Trl_3D.Core.Abstractions;
 
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using Trl_3D.Core.Events;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace Trl_3D.SampleApp
 {
@@ -79,10 +77,25 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
-            using var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgb24>(buffer, width, height);
+            using (Bitmap bmp = new Bitmap(width, height))
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        var bufferAddress = (y * width + x) * 3;
+                        byte red = buffer[bufferAddress];
+                        byte green = buffer[bufferAddress + 1];
+                        byte blue = buffer[bufferAddress + 2];
 
-            image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
-            image.SaveAsPng(fileInfo.FullName);
+                        var y_inverted = (height - 1) - y;
+
+                        bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
+                    }
+                }
+
+                bmp.Save(fileInfo.FullName, ImageFormat.Png);
+            }
 
             _logger.LogInformation($"Captured to {fileInfo.FullName}");
         }

@@ -2,6 +2,7 @@
 using Trl_3D.Core.Threading;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.OpenTk.Shaders;
+using Trl_3D.OpenTk.Textures;
 
 namespace Trl_3D.OpenTk
 {
@@ -13,6 +14,7 @@ namespace Trl_3D.OpenTk
             serviceCollection.AddSingleton<OpenGLSceneProcessor>();
             serviceCollection.AddSingleton<ICancellationTokenManager, CancellationTokenManager>();
             serviceCollection.AddSingleton<IShaderCompiler, ShaderCompiler>();
+            serviceCollection.AddSingleton<ITextureLoader, TextureLoader>();
         }
     }
 }

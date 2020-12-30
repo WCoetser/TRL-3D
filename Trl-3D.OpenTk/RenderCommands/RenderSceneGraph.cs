@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Trl_3D.OpenTk.Shaders;
 using System.Buffers;
 using System;
+using Trl_3D.OpenTk.Textures;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -20,16 +21,19 @@ namespace Trl_3D.OpenTk.RenderCommands
         private readonly ILogger _logger;
         private readonly SceneGraph _sceneGraph;
         private readonly IShaderCompiler _shaderCompiler;
+        private readonly ITextureLoader _textureLoader;
+
         private int _vertexArrayObject;
         private int _vertexBufferObject;
         private int _vertexIndexBuffer;
         private int _triangleCount;
 
-        public RenderSceneGraph(ILogger logger, IShaderCompiler shaderCompiler, SceneGraph sceneGraph)
+        public RenderSceneGraph(ILogger logger, IShaderCompiler shaderCompiler, ITextureLoader textureLoader, SceneGraph sceneGraph)
         {
             _logger = logger;
             _sceneGraph = sceneGraph;
             _shaderCompiler = shaderCompiler;
+            _textureLoader = textureLoader;
         }
 
         #region Shaders
