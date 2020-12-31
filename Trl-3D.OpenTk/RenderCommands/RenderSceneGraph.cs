@@ -10,6 +10,8 @@ using System.Buffers;
 using System;
 using Trl_3D.OpenTk.Textures;
 using Trl_3D.Core.Assertions;
+using Trl.IntegerMapper.EqualityComparerIntegerMapper;
+using Trl.IntegerMapper;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -24,12 +26,13 @@ namespace Trl_3D.OpenTk.RenderCommands
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
 
-        private Textures.Texture _activeTexture;
+        private List<Textures.Texture> _activeTextures;
 
         private int _vertexArrayObject;
         private int _vertexBufferObject;
         private int _vertexIndexBuffer;
         private int _triangleCount;
+        private int _maxFragmentShaderTextureUnits;
 
         public RenderSceneGraph(ILogger logger, IShaderCompiler shaderCompiler, ITextureLoader textureLoader, SceneGraph sceneGraph)
         {
@@ -52,11 +55,13 @@ layout (location = 1) in float surfaceIdIn;
 layout (location = 2) in vec3 vertexPosition;
 layout (location = 3) in vec4 vertexColorIn;
 layout (location = 4) in vec2 texCoordsIn;
+layout (location = 5) in float samplerIndexIn;
 
 out float vertexId;
 out float surfaceId;
 out vec4 vertexColor;
 out vec2 texCoords;
+out float samplerIndex;
 
 void main()
 {
@@ -64,43 +69,47 @@ void main()
     surfaceId = surfaceIdIn;
     vertexColor = vertexColorIn;
     texCoords = texCoordsIn;
+    samplerIndex = samplerIndexIn;
 
     gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
-        const string fragmentShaderCode =
-@"
+        string GetFragmentShaderCode(int maxFragmentShaderTextureUnits)
+        {
+            return $@"
 #version 450 core
 
 in float vertexId;
 in float surfaceId;
 in vec4 vertexColor;
 in vec2 texCoords;
+in float samplerIndex;
 
-uniform sampler2D sampler;
+uniform sampler2D samplers[{maxFragmentShaderTextureUnits}];
 
 out vec4 pixelColorOut;
 
-void main()
-{    
-    if (surfaceId == 3) {
-        pixelColorOut = texture(sampler, texCoords);
-
-        //pixelColorOut = vec4(texCoords,0,1);
-    }
-    else {
+void main() {{
+    int intSamplerIndex = int(samplerIndex);
+    if (intSamplerIndex != -1) {{
+        pixelColorOut = texture(samplers[intSamplerIndex], texCoords);
+    }}
+    else {{
         pixelColorOut = vertexColor;
-    }
-} 
+    }}
+}}
 ";
+        }
 
         #endregion
 
         public void Render(RenderInfo info)
         {
-            //GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTextureUnit(0, _activeTexture.OpenGLTextureId);
-            
+            for (int i = 0; i < _activeTextures.Count; i++)
+            {
+                GL.BindTextureUnit((uint)i, _activeTextures[i].OpenGLTextureId);
+            }
+
             GL.UseProgram(_shaderProgram.ProgramId);
             GL.BindVertexArray(_vertexArrayObject);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer);
@@ -108,12 +117,20 @@ void main()
         }
 
         public void SetState()
-        {   
-            _shaderProgram = _shaderCompiler.Compile(vertexShaderCode, fragmentShaderCode);
-                                 
-            Dictionary<ulong, uint> vertexIdToIndex = new Dictionary<ulong, uint>();            
+        {
+            // This dictionary keeps track of existing mapped textures in order to re-use them where appropriate
+            var textureObjectIdToShaderIndex = new EqualityComparerMapper<ulong>(EqualityComparer<ulong>.Default);
+
+            _maxFragmentShaderTextureUnits = GL.GetInteger(GetPName.MaxTextureImageUnits);
+            _shaderProgram = _shaderCompiler.Compile(vertexShaderCode, GetFragmentShaderCode(_maxFragmentShaderTextureUnits));
+            _activeTextures = new List<Textures.Texture>();
+
+            _logger.LogInformation($"Maximum number of fragment shader texture image units = {_maxFragmentShaderTextureUnits}");
+
             var vertexIndexBufferWriter = new ArrayBufferWriter<uint>();
             var vertexBufferWriter = new ArrayBufferWriter<float>();
+
+            var vertexIndex = 0u;
 
             foreach (var triangle in _sceneGraph.GetCompleteTriangles())
             {
@@ -121,24 +138,19 @@ void main()
 
                 uint loadVertexPosition(Core.Scene.Vertex v)
                 {
-                    if (vertexIdToIndex.TryGetValue(v.ObjectId, out uint vertexIndex))
-                    {
-                        return vertexIndex;
-                    }
-
                     _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
                     _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
+
+                    ulong? textureSamplerIndex = null;
 
                     if (texCoords != default)
                     {
                         var textureId = texCoords.TextureId;
-                        if (_sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture))
+                        if (_sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture)
+                            && !textureObjectIdToShaderIndex.TryGetMappedValue(texture.ObjectId, out textureSamplerIndex))
                         {
-                            // TODO: Manage texture indices, add multiple textures
-                            if (_activeTexture == null)
-                            {
-                                _activeTexture = _textureLoader.LoadTexture(texture);
-                            }
+                            _activeTextures.Add(_textureLoader.LoadTexture(texture));
+                            textureSamplerIndex = textureObjectIdToShaderIndex.Map(texture.ObjectId);
                         }
                     }
                     
@@ -158,13 +170,14 @@ void main()
                         vertexColor?.Opacity ?? 1.0f,
                         // Texture coords
                         texCoords == default ? 0.0f : texCoords.U,
-                        texCoords == default ? 0.0f : texCoords.V
+                        texCoords == default ? 0.0f : texCoords.V,
+                        // Texture sampler index
+                        textureSamplerIndex.HasValue ? textureSamplerIndex.Value - MapConstants.FirstMappableInteger : -1.0f // integer mapper maps from FirstMappableInteger
                     });
                     vertexBufferWriter.Write(vertexComponents);
 
-                    var retIndex = (uint)vertexIdToIndex.Count;
-                    vertexIdToIndex[v.ObjectId] = retIndex;
-                    return retIndex;
+                    vertexIndex++;
+                    return vertexIndex - 1;
                 };
 
                 var indices = new ReadOnlySpan<uint>(new uint[]
@@ -178,7 +191,12 @@ void main()
                 _triangleCount++;
             }
 
-            const int componentsPerVertex = 11; // number of floats per vertex
+            if (_activeTextures.Count > _maxFragmentShaderTextureUnits)
+            {
+                _logger.LogError("Maximum number of active textures exceeded.");
+            }
+
+            const int componentsPerVertex = 12; // number of floats per vertex
             var stride = componentsPerVertex * sizeof(float);
 
             var vertexBuffer = vertexBufferWriter.WrittenMemory.ToArray();
@@ -219,7 +237,12 @@ void main()
             GL.EnableVertexArrayAttrib(buffers[0], layout_tex_coords);
             GL.VertexAttribPointer(layout_tex_coords, 2, VertexAttribPointerType.Float, false, stride, 9 * sizeof(float));
 
-            // Vertex index buffer for triangles    
+            // Sampler index
+            const int layout_sampler_index = 5;
+            GL.EnableVertexArrayAttrib(buffers[0], layout_sampler_index);
+            GL.VertexAttribPointer(layout_sampler_index, 1, VertexAttribPointerType.Float, false, stride, 11 * sizeof(float));
+
+            // Vertex index buffer for triangles
             var vertexIndexBuffer = vertexIndexBufferWriter.WrittenMemory.ToArray();
             var indexBuffers = new int[1];
             GL.CreateBuffers(1, indexBuffers);

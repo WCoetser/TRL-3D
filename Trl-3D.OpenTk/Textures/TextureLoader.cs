@@ -20,6 +20,8 @@ namespace Trl_3D.OpenTk.Textures
 
             GL.BindTexture(TextureTarget.Texture2D, 0);
 
+            // TODO: Gen mipmaps, update min and mag filter
+
             return new Texture {
                 ObjectId = texture.ObjectId,
                 OpenGLTextureId = textureIds[0]                

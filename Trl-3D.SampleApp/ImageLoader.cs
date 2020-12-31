@@ -51,6 +51,8 @@ namespace Trl_3D.SampleApp
                     }
                 }
 
+                _logger.LogInformation($"Loaded {uri}");
+
                 return new ImageData(imageDataRgba.WrittenMemory.ToArray(), 
                     inputImage.Width, inputImage.Height);
 
