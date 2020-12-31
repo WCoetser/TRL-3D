@@ -55,12 +55,12 @@ namespace Trl_3D.SampleApp
 
                 Assertions = new IAssertion[]
                 {
-                    new Vertex(0, new Coordinate3d(-0.25f, 0.0f, 0.0f)),
-                    new Vertex(1, new Coordinate3d(0.25f, 0.0f, 0.0f)),
-                    new Vertex(2, new Coordinate3d(0.0f,  0.25f, 0.0f)),
-                    new Vertex(4, new Coordinate3d(0.5f, -0.25f, 0.0f)),
-                    new Vertex(5, new Coordinate3d(0.0f, -0.25f, 0.0f)),
-                    new Vertex(7, new Coordinate3d(-0.5f, -0.25f, 0.0f)),
+                    new Vertex(0, new Coordinate3d(-0.33f, 0.0f, 0.0f)),
+                    new Vertex(1, new Coordinate3d(0.33f, 0.0f, 0.0f)),
+                    new Vertex(2, new Coordinate3d(0.0f,  0.33f, 0.0f)),
+                    new Vertex(4, new Coordinate3d(0.66f, -0.33f, 0.0f)),
+                    new Vertex(5, new Coordinate3d(0.0f, -0.33f, 0.0f)),
+                    new Vertex(7, new Coordinate3d(-0.66f, -0.33f, 0.0f)),
 
                     // Top
                     new Triangle(3, (0, 1, 2)),
@@ -70,9 +70,9 @@ namespace Trl_3D.SampleApp
             
                     // Bottom right
                     new Triangle(6, (4, 5, 1)),
-                    new TexCoords((6, 4), 200, 5f, -2.5f),
-                    new TexCoords((6, 5), 200, 0f, -2.5f),
-                    new TexCoords((6, 1), 200, 2.5f, 0.0f),
+                    new TexCoords((6, 4), 200, 0.8f, 0.5f),
+                    new TexCoords((6, 5), 200, -0.2f, 0.5f),
+                    new TexCoords((6, 1), 200, 0.3f, 1f),
 
                     // Bottom left
                     new Triangle(8, (5, 7, 0)),

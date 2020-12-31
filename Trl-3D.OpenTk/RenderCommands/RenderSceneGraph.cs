@@ -12,6 +12,7 @@ using Trl_3D.OpenTk.Textures;
 using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper.EqualityComparerIntegerMapper;
 using Trl.IntegerMapper;
+using System.Linq;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -111,6 +112,12 @@ void main() {{
             }
 
             GL.UseProgram(_shaderProgram.ProgramId);
+
+            // This is must be here, otherwise only the first bound image from BindTextureUnit will display
+            var samplerArrayLocation = GL.GetUniformLocation(_shaderProgram.ProgramId, "samplers");
+            var samplerArray = Enumerable.Range(0, _maxFragmentShaderTextureUnits).ToArray();
+            GL.Uniform1(samplerArrayLocation, _maxFragmentShaderTextureUnits, samplerArray);
+            
             GL.BindVertexArray(_vertexArrayObject);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer);
             GL.DrawElements(PrimitiveType.Triangles, _triangleCount * 3,DrawElementsType.UnsignedInt, 0);
