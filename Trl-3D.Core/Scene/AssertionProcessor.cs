@@ -33,10 +33,6 @@ namespace Trl_3D.Core.Scene
                 {
                     vertex.Coordinates = assertionVertex.Coordinates;
                 }
-                if (assertionVertex.Color != default)
-                {
-                    vertex.Color = assertionVertex.Color;
-                }
             }
             else if (assertion is Assertions.Triangle triangle)
             {
@@ -55,7 +51,11 @@ namespace Trl_3D.Core.Scene
             }
             else if (assertion is TexCoords texCoords)
             {
-                sceneGraph.TextureCoordinates[(texCoords.SurfaceId, texCoords.VertexId)] = texCoords;
+                sceneGraph.SurfaceVertexTexCoords[texCoords.ObjectIdentifier] = texCoords;
+            }
+            else if (assertion is SurfaceColor surfaceColor)
+            {
+                sceneGraph.SurfaceVertexColors[surfaceColor.ObjectIdentifier] = surfaceColor.vertexColor;
             }
             else
             {

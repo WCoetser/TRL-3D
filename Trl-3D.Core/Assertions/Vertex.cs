@@ -13,11 +13,5 @@ namespace Trl_3D.Core.Assertions
             VertexId = vertexId;
             Coordinates = coordinates;
         }
-
-        public Vertex(ulong vertexId, ColorRgba color)
-        {
-            VertexId = vertexId;
-            Color = color;
-        }
     }
 }

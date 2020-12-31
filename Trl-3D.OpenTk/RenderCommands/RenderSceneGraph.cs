@@ -126,7 +126,8 @@ void main()
                         return vertexIndex;
                     }
 
-                    _sceneGraph.TextureCoordinates.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
+                    _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
+                    _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
 
                     if (texCoords != default)
                     {
@@ -140,7 +141,7 @@ void main()
                             }
                         }
                     }
-
+                    
                     var vertexComponents = new ReadOnlySpan<float>(new float[]
                     {
                         // Object IDs
@@ -151,10 +152,10 @@ void main()
                         v.Coordinates.Y,
                         v.Coordinates.Z,
                         // Colour
-                        v.Color?.Red ?? 1.0f,
-                        v.Color?.Green ?? 1.0f,
-                        v.Color?.Blue ?? 1.0f,
-                        v.Color?.Opacity ?? 1.0f,
+                        vertexColor?.Red ?? 1.0f,
+                        vertexColor?.Green ?? 1.0f,
+                        vertexColor?.Blue ?? 1.0f,
+                        vertexColor?.Opacity ?? 1.0f,
                         // Texture coords
                         texCoords == default ? 0.0f : texCoords.U,
                         texCoords == default ? 0.0f : texCoords.V

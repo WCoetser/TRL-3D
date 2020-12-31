@@ -12,5 +12,10 @@ namespace Trl_3D.Core.Assertions
 
     public record Texture(ulong TextureId, string Uri) : IAssertion;
 
-    public record TexCoords(ulong SurfaceId, ulong VertexId, ulong TextureId, float U, float V) : IAssertion;
+    public record TexCoords((ulong SurfaceId, ulong VertexId) ObjectIdentifier, ulong TextureId, float U, float V) : IAssertion;
+
+    /// <summary>
+    /// Colours are identified by a combination of a surface and vertex ID
+    /// </summary>
+    public record SurfaceColor((ulong SurfaceId, ulong VertexId) ObjectIdentifier, ColorRgba vertexColor) : IAssertion;
 }

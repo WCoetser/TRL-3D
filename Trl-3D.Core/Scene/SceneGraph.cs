@@ -10,7 +10,8 @@ namespace Trl_3D.Core.Scene
         public Dictionary<ulong, Vertex> Vertices { get; }        
         public Dictionary<ulong, Triangle> Triangles { get; }
         public Dictionary<ulong, Texture> Textures { get; }
-        public Dictionary<(ulong triangleId, ulong vertexId), TexCoords> TextureCoordinates { get; }
+        public Dictionary<(ulong triangleId, ulong vertexId), TexCoords> SurfaceVertexTexCoords { get; }
+        public Dictionary<(ulong triangleId, ulong vertexId), ColorRgba> SurfaceVertexColors { get; }
 
         public SceneGraph()
         {
@@ -18,7 +19,8 @@ namespace Trl_3D.Core.Scene
             Triangles = new Dictionary<ulong, Triangle>();
             Vertices = new Dictionary<ulong, Vertex>();
             Textures = new Dictionary<ulong, Texture>();
-            TextureCoordinates = new Dictionary<(ulong triangleId, ulong vertexId), TexCoords>();
+            SurfaceVertexTexCoords = new Dictionary<(ulong triangleId, ulong vertexId), TexCoords>();
+            SurfaceVertexColors = new Dictionary<(ulong triangleId, ulong vertexId), ColorRgba>();
         }
 
         public IEnumerable<Triangle> GetCompleteTriangles()

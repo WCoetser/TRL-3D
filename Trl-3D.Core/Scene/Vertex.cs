@@ -9,7 +9,5 @@ namespace Trl_3D.Core.Scene
         }
 
         public Coordinate3d Coordinates { get; set; }
-
-        public ColorRgba Color { get; set; }
     }
 }

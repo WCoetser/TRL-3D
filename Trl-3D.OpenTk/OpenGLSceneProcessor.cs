@@ -58,7 +58,7 @@ namespace Trl_3D.OpenTk
             
             _renderList.Clear();
             
-            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));            
+            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
             InsertCommandInRenderOrder(new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, sceneGraph));
             InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
 
