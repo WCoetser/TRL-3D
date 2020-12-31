@@ -53,6 +53,10 @@ namespace Trl_3D.Core.Scene
                 sceneGraph.Textures[texture.TextureId] = new Texture(sceneGraph, texture.TextureId, loadedImage.BufferRgba, 
                     loadedImage.Width, loadedImage.Height);
             }
+            else if (assertion is TexCoords texCoords)
+            {
+                sceneGraph.TextureCoordinates[(texCoords.SurfaceId, texCoords.VertexId)] = texCoords;
+            }
             else
             {
                 throw new ArgumentException($"Unknown assertion type: {assertion.GetType()}");

@@ -11,4 +11,6 @@ namespace Trl_3D.Core.Assertions
     public record Triangle(ulong TriangleId, (ulong Point1Id, ulong Point2Id, ulong Point3Id) VertexIds) : IAssertion;
 
     public record Texture(ulong TextureId, string Uri) : IAssertion;
+
+    public record TexCoords(ulong SurfaceId, ulong VertexId, ulong TextureId, float U, float V) : IAssertion;
 }

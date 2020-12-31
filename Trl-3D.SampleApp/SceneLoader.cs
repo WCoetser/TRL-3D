@@ -50,6 +50,8 @@ namespace Trl_3D.SampleApp
             var batch2 = new AssertionBatch
             {
                 // TODO: Use IDs to cater for external integration, display indices
+                // TODO: Attach colours to surfaces instead of vertices
+                
                 Assertions = new IAssertion[]
                 {
                     // Top
@@ -57,6 +59,9 @@ namespace Trl_3D.SampleApp
                     new Vertex(1, new Coordinate3d(0.25f, 0.0f, 0.0f)),  new Vertex(1, new ColorRgba(1.0f, 0.0f, 0.0f, 1.0f)),
                     new Vertex(2, new Coordinate3d(0.0f,  0.25f, 0.0f)), new Vertex(2, new ColorRgba(1.0f, 0.0f, 0.0f, 1.0f)),
                     new Triangle(3, (0, 1, 2)),
+                    new TexCoords(3, 0, 100, 0f, 0.2f),
+                    new TexCoords(3, 1, 100, 1f, 0.2f),
+                    new TexCoords(3, 2, 100, 0.5f,  0.7f),
             
                     // Bottom right
                     new Vertex(4, new Coordinate3d(0.5f, -0.25f, 0.0f)), new Vertex(4, new ColorRgba(0.0f, 1.0f, 0.0f, 1.0f)),

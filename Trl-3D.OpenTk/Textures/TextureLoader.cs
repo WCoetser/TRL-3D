@@ -16,9 +16,9 @@ namespace Trl_3D.OpenTk.Textures
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)All.Linear);
 
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, texture.Width, texture.Height, 
-                0, PixelFormat.Rgba, PixelType.Byte, texture.ImageDataRgba);
+                0, PixelFormat.Rgba, PixelType.UnsignedByte, texture.ImageDataRgba);
 
-            GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
 
             return new Texture {
                 ObjectId = texture.ObjectId,

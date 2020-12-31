@@ -67,7 +67,7 @@ namespace Trl_3D.SampleApp
             }
         }
 
-        private void ProcessCapture(byte[] buffer, int width, int height)
+        private void ProcessCapture(byte[] bufferRgb, int width, int height)
         {
             var filename = $"capture.png";
 
@@ -77,25 +77,24 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
-            using (Bitmap bmp = new Bitmap(width, height))
+            using var bmp = new Bitmap(width, height);
+
+            for (int x = 0; x < width; x++)
             {
-                for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    for (int y = 0; y < height; y++)
-                    {
-                        var bufferAddress = (y * width + x) * 3;
-                        byte red = buffer[bufferAddress];
-                        byte green = buffer[bufferAddress + 1];
-                        byte blue = buffer[bufferAddress + 2];
+                    var bufferAddress = (y * width + x) * 3;
+                    byte red = bufferRgb[bufferAddress];
+                    byte green = bufferRgb[bufferAddress + 1];
+                    byte blue = bufferRgb[bufferAddress + 2];
 
-                        var y_inverted = (height - 1) - y;
+                    var y_inverted = (height - 1) - y;
 
-                        bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
-                    }
+                    bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
                 }
-
-                bmp.Save(fileInfo.FullName, ImageFormat.Png);
             }
+
+            bmp.Save(fileInfo.FullName, ImageFormat.Png);
 
             _logger.LogInformation($"Captured to {fileInfo.FullName}");
         }

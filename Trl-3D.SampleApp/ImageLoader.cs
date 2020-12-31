@@ -25,7 +25,7 @@ namespace Trl_3D.SampleApp
             {
                 if (uri.Scheme != Uri.UriSchemeFile)
                 {
-                    throw new Exception("Only local file loading supported.");
+                    throw new Exception($"Expected image URI schema: {Uri.UriSchemeFile}");
                 }
 
                 var imageRaw = await File.ReadAllBytesAsync(uri.LocalPath, _cancellationTokenManager.CancellationToken);
@@ -33,13 +33,14 @@ namespace Trl_3D.SampleApp
                 using var inputImage = Image.FromStream(memIn);
                 using var bmp = new Bitmap(inputImage);
 
+                // Buffer is loaded from top to bottom from left to right
                 var imageDataRgba = new ArrayBufferWriter<byte>();
-                for (int x = 0; x < inputImage.Width; x++)
+                for (int y = 0; y < inputImage.Height; y++)                    
                 {
-                    for (int y = 0; y < inputImage.Height; y++)
+                    for (int x = 0; x < inputImage.Width; x++)
                     {
                         var y_inverted = (inputImage.Height - 1) - y;
-                        var bufferAddress = (y_inverted * inputImage.Width + x) * 3;
+                        var bufferAddress = (y_inverted * inputImage.Width + x) * 4;
                         var pixel = bmp.GetPixel(x, y_inverted);
                         imageDataRgba.Write(new ReadOnlySpan<byte>(new byte[] {
                             pixel.R,

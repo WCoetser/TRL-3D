@@ -11,7 +11,7 @@ namespace Trl_3D.Core.Abstractions
     public interface IImageLoader
     {
         /// <summary>
-        /// Gets an image based on a path or URL
+        /// Gets an image based on a path or URL.
         /// </summary>
         Task<ImageData> LoadImage(Uri uri);
     }
