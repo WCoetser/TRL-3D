@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Channels;
-using Trl_3D.Core.Scene;
+using Trl_3D.Core.Scene.Updates;
 
 namespace Trl_3D.Core.Abstractions
 {
@@ -9,7 +9,7 @@ namespace Trl_3D.Core.Abstractions
         /// <summary>
         /// Channel for receiving updates to the current scene graph.
         /// </summary>
-        Channel<SceneGraph> SceneGraphUpdatesChannel { get; }
+        Channel<ISceneGraphUpdate> SceneGraphUpdatesChannel { get; }
 
         /// <summary>
         /// Channel for events going out of the 3D engine, ex. mouse, keyboard, screenshot

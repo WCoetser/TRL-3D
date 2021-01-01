@@ -35,9 +35,6 @@ namespace Trl_3D.Core.Scene
 
         public async Task StartAssertionConsumer()
         {
-            // TODO: Add differential rendering
-            SceneGraph sceneGraph = new SceneGraph();
-
             await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken))
             {
                 if (assertionBatch.Assertions == null || !assertionBatch.Assertions.Any())
@@ -45,25 +42,22 @@ namespace Trl_3D.Core.Scene
                     _logger.LogWarning("Assertion batch has no assertions");
                     continue;
                 }
-                foreach (var assertion in assertionBatch.Assertions)
+
+                // Scene graph is updated per batch to group together updates
+                try
                 {
-                    try
-                    {
-                        await _assertionProcessor.Process(assertion, sceneGraph);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Scene assertion processor failed");
-                    }
+                    var update = await _assertionProcessor.Process(assertionBatch);
+                    await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(update, _cancellationTokenManager.CancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Scene assertion processor failed");
                 }
             }
-
-            // TODO: Move updates to await foreach loop
-            await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(sceneGraph, _cancellationTokenManager.CancellationToken);
 
             _logger.LogInformation("Scene assertion consumer stopped.");
         }

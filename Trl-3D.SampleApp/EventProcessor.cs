@@ -3,14 +3,19 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using Image = SixLabors.ImageSharp.Image;
+
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Events;
-using System.Diagnostics;
+using Trl_3D.Core.Assertions;
+using OpenTK.Mathematics;
 
 namespace Trl_3D.SampleApp
 {
@@ -19,15 +24,23 @@ namespace Trl_3D.SampleApp
         private readonly IRenderWindow _renderWindow;
         private readonly ILogger<EventProcessor> _logger;
         private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly IScene _scene;
 
-        public EventProcessor(IRenderWindow renderWindow, ILogger<EventProcessor> logger, ICancellationTokenManager cancellationTokenManager)
+        private CameraOrientation _currentCameraOrientation;
+
+        public EventProcessor(IRenderWindow renderWindow, 
+                            ILogger<EventProcessor> logger, 
+                            ICancellationTokenManager cancellationTokenManager, 
+                            IScene scene)
         {
             _renderWindow = renderWindow;
             _logger = logger;
             _cancellationTokenManager = cancellationTokenManager;
+            _scene = scene;
+            _currentCameraOrientation = CameraOrientation.Default;
             _logger.LogInformation("EventProcessor created");
         }
-
+        
         public async Task StartEventProcessor()
         {
             _logger.LogInformation("EventProcessor started");
@@ -41,7 +54,7 @@ namespace Trl_3D.SampleApp
                     }
                     else if (currenEvent is UserInputStateEvent userInputEvent)
                     {
-                        ProcessUserEvent(userInputEvent);
+                        await ProcessUserEvent(userInputEvent);
                     }
                     else
                     {
@@ -60,11 +73,38 @@ namespace Trl_3D.SampleApp
             _logger.LogInformation("EventProcessor stopped");
         }
 
-        private void ProcessUserEvent(UserInputStateEvent userInputEvent)
+        private async Task ProcessUserEvent(UserInputStateEvent userInputEvent)
         {
-            if (userInputEvent.KeyboardState.WasKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape))
+            if (userInputEvent.KeyboardState.WasKeyDown(Keys.Escape))
             {
                 _renderWindow.Close();
+            }
+            bool hasLeft = userInputEvent.KeyboardState.IsKeyDown(Keys.A);
+            bool hasRight = userInputEvent.KeyboardState.IsKeyDown(Keys.D);
+            if (hasLeft || hasRight)
+            {
+                var dX = (hasLeft, hasRight) switch {
+                    (true, false) => -1.0f,
+                    (false, true) => 1.0f,
+                    _ => 0.0f
+                };
+                dX *= (float)userInputEvent.TimeSinceLastEventSeconds;
+                Vector3 moveVec = new (-1,0,0); // we are looking in the negative z direction, therefore "right" is -1
+                moveVec *= dX;
+                Vector3 newLocation = _currentCameraOrientation.CameraLocation.ToOpenTkVec3() + moveVec;
+
+                _currentCameraOrientation = _currentCameraOrientation with
+                {
+                    CameraLocation = new (newLocation.X, newLocation.Y, newLocation.Z)
+                };
+
+                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
+                {
+                    Assertions = new IAssertion[]
+                    {
+                        _currentCameraOrientation
+                    }
+                }); 
             }
         }
 

@@ -23,7 +23,10 @@ namespace Trl_3D.Core.Assertions
     /// Sets the view model matrix to "move the camera"
     /// The "up" vector is automatically calculated to get a camera that behaves like one in a first person shooter.
     /// </summary>
-    public record CameraOrientation(Coordinate3d CameraLocation, Vector3d CameraDirection, Vector3d UpDirection) : IAssertion;
+    public record CameraOrientation(Coordinate3d CameraLocation, Vector3d CameraDirection, Vector3d UpDirection) : IAssertion
+    {
+        public static CameraOrientation Default => new CameraOrientation(new(0f, 0f, 0f), new(0, 0, -1), new(0, 1, 0));
+    }
 
     /// <summary>
     /// Sets the projection used.

@@ -12,6 +12,7 @@ using Trl_3D.Core.Abstractions;
 using OpenTK.Graphics.OpenGL4;
 using Trl_3D.OpenTk.Shaders;
 using Trl_3D.OpenTk.Textures;
+using Trl_3D.Core.Scene.Updates;
 
 namespace Trl_3D.OpenTk
 {
@@ -52,19 +53,30 @@ namespace Trl_3D.OpenTk
             _windowSizeChanged = true;
         }
 
-        public void UpdateState(SceneGraph sceneGraph)
+        public void UpdateState(ISceneGraphUpdate sceneGraphUpdate)
         {
-            // TODO: Add differential rendering
-            
-            _renderList.Clear();
-            
-            InsertCommandInRenderOrder(new ClearColor(sceneGraph.RgbClearColor));
-            InsertCommandInRenderOrder(new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, sceneGraph));
-            InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
-
-            foreach (var command in _renderList)
+            if (sceneGraphUpdate is ViewMatrixUpdate viewMatrixUpdate)
             {
-                command.SetState();
+                _renderInfo.ViewMatrix = viewMatrixUpdate.NewViewMatrix;
+            }
+            else if (sceneGraphUpdate is ContentUpdate contentUpdate)
+            {
+                // TODO: Add differential rendering for sub-updates
+
+                _renderList.Clear();
+
+                InsertCommandInRenderOrder(new ClearColor(contentUpdate.SceneGraph.RgbClearColor));
+                InsertCommandInRenderOrder(new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, contentUpdate.SceneGraph));
+                InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
+
+                foreach (var command in _renderList)
+                {
+                    command.SetState();
+                }
+            }
+            else
+            {
+                throw new Exception($"Unknown scene graph update of type {sceneGraphUpdate.GetType().FullName} given.");
             }
         }
 

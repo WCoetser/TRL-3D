@@ -15,6 +15,7 @@ using Trl_3D.Core.Scene;
 using Trl_3D.OpenTk.Textures;
 using Trl_3D.Core.Assertions;
 using Trl_3D.OpenTk.Shaders;
+using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -125,7 +126,7 @@ void main() {{
 
             // Set the view matrix for world coordinates to camera coordinates transformation
             var viewMatrixLocation = GL.GetUniformLocation(_shaderProgram.ProgramId, "viewMatrix");
-            var viewMatrix = _sceneGraph.ViewMatrix;
+            var viewMatrix = info.ViewMatrix;
             GL.UniformMatrix4(viewMatrixLocation, false, ref viewMatrix);
 
             // This is must be here, otherwise the first bound image from BindTextureUnit will display instead of the one that is actually bound

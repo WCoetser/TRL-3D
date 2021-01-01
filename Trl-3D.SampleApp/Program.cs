@@ -103,7 +103,7 @@ namespace Trl_3D.SampleApp
         public static void ConfigureServices(IServiceCollection services)
         {            
             // Logging
-            var logger = new LoggerConfiguration()
+            var logger = new LoggerConfiguration()                              
                               .WriteTo.Console(Serilog.Events.LogEventLevel.Verbose)
                               .CreateLogger();
             services.AddLogging(builder => {
