@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Trl_3D.Core;

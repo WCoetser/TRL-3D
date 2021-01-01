@@ -7,7 +7,7 @@ namespace Trl_3D.Core.Scene
 {
     public class AssertionProcessor
     {
-        private IImageLoader _imageLoader;
+        private readonly IImageLoader _imageLoader;
 
         public AssertionProcessor(IImageLoader imageLoader)
         {
@@ -38,7 +38,7 @@ namespace Trl_3D.Core.Scene
             {
                 sceneGraph.Triangles[triangle.TriangleId] = new Triangle(sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
             }
-            else if (assertion is GrabScreenshot grabScreenshot)
+            else if (assertion is GrabScreenshot)
             {
                 // Nothing to do here, screenshots passed out to event processor via render window event channel
             }

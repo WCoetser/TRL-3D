@@ -4,12 +4,13 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-using Trl_3D.Core.Abstractions;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
+using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Events;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Drawing;
-using System.Drawing.Imaging;
+
 
 namespace Trl_3D.SampleApp
 {
@@ -61,7 +62,7 @@ namespace Trl_3D.SampleApp
 
         private void ProcessUserEvent(UserInputStateEvent userInputEvent)
         {
-            if (userInputEvent.KeyboardState.WasKeyDown(Keys.Escape))
+            if (userInputEvent.KeyboardState.WasKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape))
             {
                 _renderWindow.Close();
             }
@@ -77,24 +78,11 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
-            using var bmp = new Bitmap(width, height);
-
-            for (int x = 0; x < width; x++)
+            using (var image = Image.LoadPixelData<Rgb24>(bufferRgb, width, height))
             {
-                for (int y = 0; y < height; y++)
-                {
-                    var bufferAddress = (y * width + x) * 3;
-                    byte red = bufferRgb[bufferAddress];
-                    byte green = bufferRgb[bufferAddress + 1];
-                    byte blue = bufferRgb[bufferAddress + 2];
-
-                    var y_inverted = (height - 1) - y;
-
-                    bmp.SetPixel(x, y_inverted, Color.FromArgb(red, green, blue));
-                }
+                image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
+                image.SaveAsPng(fileInfo.FullName);
             }
-
-            bmp.Save(fileInfo.FullName, ImageFormat.Png);
 
             _logger.LogInformation($"Captured to {fileInfo.FullName}");
         }
