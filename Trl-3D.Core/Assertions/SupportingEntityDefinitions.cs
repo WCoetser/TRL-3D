@@ -2,5 +2,7 @@
 {
     public record Coordinate3d(float X, float Y, float Z);
 
+    public record Vector3d(float dX, float dY, float dZ);
+
     public record ColorRgba(float Red, float Green, float Blue, float Opacity);
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using OpenTK.Mathematics;
+using System.Collections.Generic;
 using System.Linq;
 using Trl_3D.Core.Assertions;
 
@@ -7,6 +8,7 @@ namespace Trl_3D.Core.Scene
     public class SceneGraph
     {
         public ColorRgba RgbClearColor { get; set; }
+        public Matrix4 ViewMatrix { get; set; }
         public Dictionary<ulong, Vertex> Vertices { get; }        
         public Dictionary<ulong, Triangle> Triangles { get; }
         public Dictionary<ulong, Texture> Textures { get; }
@@ -21,6 +23,7 @@ namespace Trl_3D.Core.Scene
             Textures = new Dictionary<ulong, Texture>();
             SurfaceVertexTexCoords = new Dictionary<(ulong triangleId, ulong vertexId), TexCoords>();
             SurfaceVertexColors = new Dictionary<(ulong triangleId, ulong vertexId), ColorRgba>();
+            ViewMatrix = Matrix4.Identity;
         }
 
         public IEnumerable<Triangle> GetCompleteTriangles()

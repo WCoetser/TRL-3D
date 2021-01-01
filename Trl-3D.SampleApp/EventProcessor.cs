@@ -10,7 +10,7 @@ using SixLabors.ImageSharp.Processing;
 
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Events;
-
+using System.Diagnostics;
 
 namespace Trl_3D.SampleApp
 {
@@ -78,13 +78,18 @@ namespace Trl_3D.SampleApp
                 fileInfo.Delete();
             }
 
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             using (var image = Image.LoadPixelData<Rgb24>(bufferRgb, width, height))
             {
                 image.Mutate(x => x.RotateFlip(RotateMode.None, FlipMode.Vertical));
                 image.SaveAsPng(fileInfo.FullName);
             }
 
-            _logger.LogInformation($"Captured to {fileInfo.FullName}");
+            stopwatch.Stop();
+
+            _logger.LogInformation($"Captured to {fileInfo.FullName} in {stopwatch.ElapsedMilliseconds} ms");
         }
     }
 }

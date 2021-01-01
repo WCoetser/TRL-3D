@@ -1,18 +1,20 @@
-﻿using Trl_3D.Core.Abstractions;
-
-using OpenTK.Graphics.OpenGL4;
+﻿using OpenTK.Graphics.OpenGL4;
 
 using Microsoft.Extensions.Logging;
-using Trl_3D.Core.Scene;
-using System.Collections.Generic;
-using Trl_3D.OpenTk.Shaders;
+
 using System.Buffers;
 using System;
-using Trl_3D.OpenTk.Textures;
-using Trl_3D.Core.Assertions;
+using System.Linq;
+using System.Collections.Generic;
+
 using Trl.IntegerMapper.EqualityComparerIntegerMapper;
 using Trl.IntegerMapper;
-using System.Linq;
+
+using Trl_3D.Core.Abstractions;
+using Trl_3D.Core.Scene;
+using Trl_3D.OpenTk.Textures;
+using Trl_3D.Core.Assertions;
+using Trl_3D.OpenTk.Shaders;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -28,6 +30,12 @@ namespace Trl_3D.OpenTk.RenderCommands
         private readonly ITextureLoader _textureLoader;
 
         private List<Textures.Texture> _activeTextures;
+
+        // TODO: Make this per surface
+        //private object ModelMatrix;
+        
+        // TODO: Move view and projection matrices to main processing loop ...
+        //private object ProjectionMatrix;
 
         private int _vertexArrayObject;
         private int _vertexBufferObject;
@@ -64,6 +72,8 @@ out vec4 vertexColor;
 out vec2 texCoords;
 out float samplerIndex;
 
+uniform mat4 viewMatrix;
+
 void main()
 {
     vertexId = vertexIdIn;
@@ -72,7 +82,7 @@ void main()
     texCoords = texCoordsIn;
     samplerIndex = samplerIndexIn;
 
-    gl_Position = vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
+    gl_Position = viewMatrix * vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }";
 
         string GetFragmentShaderCode(int maxFragmentShaderTextureUnits)
@@ -113,7 +123,12 @@ void main() {{
 
             GL.UseProgram(_shaderProgram.ProgramId);
 
-            // This is must be here, otherwise only the first bound image from BindTextureUnit will display
+            // Set the view matrix for world coordinates to camera coordinates transformation
+            var viewMatrixLocation = GL.GetUniformLocation(_shaderProgram.ProgramId, "viewMatrix");
+            var viewMatrix = _sceneGraph.ViewMatrix;
+            GL.UniformMatrix4(viewMatrixLocation, false, ref viewMatrix);
+
+            // This is must be here, otherwise the first bound image from BindTextureUnit will display instead of the one that is actually bound
             var samplerArrayLocation = GL.GetUniformLocation(_shaderProgram.ProgramId, "samplers");
             var samplerArray = Enumerable.Range(0, _maxFragmentShaderTextureUnits).ToArray();
             GL.Uniform1(samplerArrayLocation, _maxFragmentShaderTextureUnits, samplerArray);

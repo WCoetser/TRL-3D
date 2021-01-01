@@ -25,21 +25,21 @@ namespace Trl_3D.SampleApp
 
         public async Task StartAssertionProducer()
         {
+            var currentLocation = new FileInfo(typeof(SceneLoader).Assembly.Location);
+            string image = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail.jpg";
+            string image2 = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail_2.jpg";
+
             var batch1 = new AssertionBatch
             {
                 Assertions = new IAssertion[]
                 {
-                    // will always execute at the start of the render loop
                     new ClearColor(0.1f, 0.1f, 0.2f),
-                    // will always execute at the end of the render loop
-                    new GrabScreenshot()
+                    new GrabScreenshot(),                    
+                    new CameraOrientation(new (0.5f,0.5f,0.5f), new (0,0,-1), new (0,1,0)),
                 }
             };
             await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.CancellationToken);
                         
-            FileInfo currentLocation = new FileInfo(typeof(SceneLoader).Assembly.Location);
-            string image = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail.jpg";
-            string image2 = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail_2.jpg";
             var images = new AssertionBatch
             {
                 Assertions = new IAssertion [] {
