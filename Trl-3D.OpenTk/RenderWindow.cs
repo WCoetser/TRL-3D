@@ -8,7 +8,7 @@ using Trl_3D.Core.Abstractions;
 using OpenTK.Graphics.OpenGL4;
 using Trl_3D.Core.Events;
 using System.Threading.Tasks;
-using Trl_3D.Core.Scene.Updates;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.OpenTk
 {

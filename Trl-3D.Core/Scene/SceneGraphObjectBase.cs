@@ -2,11 +2,11 @@
 
 namespace Trl_3D.Core.Scene
 {
-    public class SceneGraphObjectBase : ObjectIdentityBase
+    public abstract class SceneGraphObjectBase : ObjectIdentityBase
     {
         protected SceneGraph SceneGraph { get; }
 
-        public SceneGraphObjectBase(SceneGraph sceneGraph, ulong objectId) : base(objectId)
+        protected SceneGraphObjectBase(SceneGraph sceneGraph, ulong objectId) : base(objectId)
         {
             SceneGraph = sceneGraph;
         }

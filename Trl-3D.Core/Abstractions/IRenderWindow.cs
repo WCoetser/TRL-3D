@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Channels;
-using Trl_3D.Core.Scene.Updates;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.Core.Abstractions
 {

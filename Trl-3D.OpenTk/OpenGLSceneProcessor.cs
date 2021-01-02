@@ -12,7 +12,7 @@ using Trl_3D.Core.Abstractions;
 using OpenTK.Graphics.OpenGL4;
 using Trl_3D.OpenTk.Shaders;
 using Trl_3D.OpenTk.Textures;
-using Trl_3D.Core.Scene.Updates;
+using Trl_3D.OpenTk.AssertionProcessor;
 
 namespace Trl_3D.OpenTk
 {
@@ -53,7 +53,7 @@ namespace Trl_3D.OpenTk
             _windowSizeChanged = true;
         }
 
-        public void UpdateState(ISceneGraphUpdate sceneGraphUpdate)
+        public void UpdateState(Core.Scene.ISceneGraphUpdate sceneGraphUpdate)
         {
             if (sceneGraphUpdate is ViewMatrixUpdate viewMatrixUpdate)
             {

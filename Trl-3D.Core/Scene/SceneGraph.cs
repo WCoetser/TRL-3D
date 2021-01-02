@@ -1,5 +1,4 @@
-﻿using OpenTK.Mathematics;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Trl_3D.Core.Assertions;
 

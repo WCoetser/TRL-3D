@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Scene;
-using Trl_3D.Core.Scene.Updates;
 
 namespace Trl_3D.OpenTk.AssertionProcessor
 {
@@ -67,7 +66,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         /// <summary>
         /// Generates scene graph updates for renderer.
         /// </summary>
-        public async Task<ISceneGraphUpdate> Process(AssertionBatch assertionBatch)
+        public async Task<Trl_3D.Core.Scene.ISceneGraphUpdate> Process(AssertionBatch assertionBatch)
         {
             if (assertionBatch.Assertions.Count() == 1
                 && assertionBatch.Assertions.Single() is CameraOrientation cameraOrientation)
