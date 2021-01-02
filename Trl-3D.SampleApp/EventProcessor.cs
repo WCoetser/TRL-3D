@@ -24,14 +24,14 @@ namespace Trl_3D.SampleApp
         private readonly IRenderWindow _renderWindow;
         private readonly ILogger<EventProcessor> _logger;
         private readonly ICancellationTokenManager _cancellationTokenManager;
-        private readonly IScene _scene;
+        private readonly IAssertionProcessor _scene;
 
         private CameraOrientation _currentCameraOrientation;
 
         public EventProcessor(IRenderWindow renderWindow, 
                             ILogger<EventProcessor> logger, 
                             ICancellationTokenManager cancellationTokenManager, 
-                            IScene scene)
+                            IAssertionProcessor scene)
         {
             _renderWindow = renderWindow;
             _logger = logger;

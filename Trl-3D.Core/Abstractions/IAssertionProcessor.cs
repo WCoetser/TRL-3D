@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Trl_3D.Core.Abstractions
 {
-    public interface IScene
+    public interface IAssertionProcessor
     {
         /// <summary>
         /// The channel render assertions are written to by the loader.

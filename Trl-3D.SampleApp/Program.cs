@@ -37,7 +37,7 @@ namespace Trl_3D.SampleApp
                 var sceneProducerTask = Task.Run(async () => await loader.StartAssertionProducer());
 
                 // Consume scene elements (assertions) on seperate thread using producer-consumer pattern
-                var scene = serviceProvider.GetRequiredService<IScene>();
+                var scene = serviceProvider.GetRequiredService<IAssertionProcessor>();
                 var sceneConsumerTask = Task.Run(async () => await scene.StartAssertionConsumer());
 
                 // Events are processed on it's own thread

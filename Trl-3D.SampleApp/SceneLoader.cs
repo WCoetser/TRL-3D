@@ -12,10 +12,10 @@ namespace Trl_3D.SampleApp
     public class SceneLoader : IAssertionLoader
     {
         private readonly ILogger<SceneLoader> _logger;
-        private readonly IScene _scene;
+        private readonly IAssertionProcessor _scene;
         private readonly ICancellationTokenManager _cancellationTokenManager;
 
-        public SceneLoader(ILogger<SceneLoader> logger, IScene scene, ICancellationTokenManager cancellationTokenManager)
+        public SceneLoader(ILogger<SceneLoader> logger, IAssertionProcessor scene, ICancellationTokenManager cancellationTokenManager)
         {
             _logger = logger;
             _scene = scene;

@@ -15,6 +15,7 @@ namespace Trl_3D.OpenTk
             serviceCollection.AddSingleton<ICancellationTokenManager, CancellationTokenManager>();
             serviceCollection.AddSingleton<IShaderCompiler, ShaderCompiler>();
             serviceCollection.AddSingleton<ITextureLoader, TextureLoader>();
+            serviceCollection.AddSingleton<IAssertionProcessor, AssertionProcessor.AssertionProcessor>();
         }
     }
 }
