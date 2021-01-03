@@ -1,12 +1,15 @@
 ﻿using Microsoft.Extensions.Logging;
-using OpenTK.Mathematics;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Scene;
+using Trl_3D.OpenTk.RenderCommands;
+using Trl_3D.OpenTk.Shaders;
+using Trl_3D.OpenTk.Textures;
 
 namespace Trl_3D.OpenTk.AssertionProcessor
 {
@@ -17,26 +20,38 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         private readonly IRenderWindow _renderWindow;
         private readonly ICancellationTokenManager _cancellationTokenManager;
         private readonly IImageLoader _imageLoader;
+        private readonly SceneGraph _sceneGraph;
+        private readonly IShaderCompiler _shaderCompiler;
+        private readonly ITextureLoader _textureLoader;
+
+        bool hasTriangleBuffer = false;
 
         public Channel<AssertionBatch> AssertionUpdatesChannel { get; private set; }
 
         public AssertionProcessor(IImageLoader imageLoader,
                                   ILogger<AssertionProcessor> logger,
                                   IRenderWindow renderWindow,
-                                  ICancellationTokenManager cancellationTokenManager)
+                                  ICancellationTokenManager cancellationTokenManager,
+                                  SceneGraph sceneGraph,
+                                  IShaderCompiler shaderCompiler, 
+                                  ITextureLoader textureLoader)
         {
             _logger = logger;
             _renderWindow = renderWindow;
             _cancellationTokenManager = cancellationTokenManager;
             _logger.LogInformation("Scene created.");
             _imageLoader = imageLoader;
+            _sceneGraph = sceneGraph;
+            _shaderCompiler = shaderCompiler;
+            _textureLoader = textureLoader;
 
             AssertionUpdatesChannel = Channel.CreateUnbounded<AssertionBatch>();
         }
 
         public async Task StartAssertionConsumer()
         {
-            await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken))
+            await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken)
+                .WithCancellation(_cancellationTokenManager.CancellationToken))
             {
                 if (assertionBatch.Assertions == null || !assertionBatch.Assertions.Any())
                 {
@@ -47,8 +62,12 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 // Scene graph is updated per batch to group together updates
                 try
                 {
-                    var update = await Process(assertionBatch);
-                    await _renderWindow.SceneGraphUpdatesChannel.Writer.WriteAsync(update, _cancellationTokenManager.CancellationToken);
+                    await foreach (var renderCommand in Process(assertionBatch)
+                        .WithCancellation(_cancellationTokenManager.CancellationToken))
+                    {
+                        await _renderWindow.RenderCommandUpdatesChannel.Writer.WriteAsync(renderCommand, 
+                            _cancellationTokenManager.CancellationToken);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -66,75 +85,68 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         /// <summary>
         /// Generates scene graph updates for renderer.
         /// </summary>
-        public async Task<Trl_3D.Core.Scene.ISceneGraphUpdate> Process(AssertionBatch assertionBatch)
+        public async IAsyncEnumerable<IRenderCommand> Process(AssertionBatch assertionBatch)
         {
-            if (assertionBatch.Assertions.Count() == 1
-                && assertionBatch.Assertions.Single() is CameraOrientation cameraOrientation)
+            foreach (var assertion in assertionBatch.Assertions)
             {
-                return new ViewMatrixUpdate(GetViewMatrix(cameraOrientation));
-            }
-            else
-            {
-                SceneGraph sceneGraph = new SceneGraph();
-
-                foreach (var assertion in assertionBatch.Assertions)
+                if (assertion is Core.Assertions.ClearColor clearColor)
                 {
-                    if (assertion is Core.Assertions.ClearColor clearColor)
+                    _sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
+                    yield return new RenderCommands.ClearColor(_sceneGraph.RgbClearColor);
+                }
+                else if (assertion is CameraOrientation cameraOrientation)
+                {
+                    // View matrix is set in uniforms
+                    _sceneGraph.ViewMatrix = cameraOrientation.ToMatrix();
+                }
+                else if (assertion is Core.Assertions.Vertex assertionVertex)
+                {
+                    if (!_sceneGraph.Vertices.TryGetValue(assertionVertex.VertexId, out Core.Scene.Vertex vertex))
                     {
-                        sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
+                        vertex = new Core.Scene.Vertex(_sceneGraph, assertionVertex.VertexId);
+                        _sceneGraph.Vertices[assertionVertex.VertexId] = vertex;
                     }
-                    else if (assertion is Core.Assertions.Vertex assertionVertex)
+                    if (assertionVertex.Coordinates != default)
                     {
-                        if (!sceneGraph.Vertices.TryGetValue(assertionVertex.VertexId, out Core.Scene.Vertex vertex))
-                        {
-                            vertex = new Core.Scene.Vertex(sceneGraph, assertionVertex.VertexId);
-                            sceneGraph.Vertices[assertionVertex.VertexId] = vertex;
-                        }
-                        if (assertionVertex.Coordinates != default)
-                        {
-                            vertex.Coordinates = assertionVertex.Coordinates;
-                        }
-                    }
-                    else if (assertion is Core.Assertions.Triangle triangle)
-                    {
-                        sceneGraph.Triangles[triangle.TriangleId] = new Core.Scene.Triangle(sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
-                    }
-                    else if (assertion is Core.Assertions.GrabScreenshot)
-                    {
-                        // Nothing to do here, screenshots passed out to event processor via render window event channel
-                    }
-                    else if (assertion is Core.Assertions.Texture texture)
-                    {
-                        // Pre-load texture to avoid doing this in the function setting OpenGL state
-                        var loadedImage = await _imageLoader.LoadImage(new Uri(texture.Uri));
-                        sceneGraph.Textures[texture.TextureId] = new Core.Scene.Texture(sceneGraph, texture.TextureId, loadedImage.BufferRgba,
-                            loadedImage.Width, loadedImage.Height);
-                    }
-                    else if (assertion is Core.Assertions.TexCoords texCoords)
-                    {
-                        sceneGraph.SurfaceVertexTexCoords[texCoords.ObjectIdentifier] = texCoords;
-                    }
-                    else if (assertion is Core.Assertions.SurfaceColor surfaceColor)
-                    {
-                        sceneGraph.SurfaceVertexColors[surfaceColor.ObjectIdentifier] = surfaceColor.vertexColor;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Unknown assertion type: {assertion.GetType()}");
+                        vertex.Coordinates = assertionVertex.Coordinates;
                     }
                 }
-
-                return new ContentUpdate(sceneGraph);
+                else if (assertion is Core.Assertions.Triangle triangle)
+                {
+                    _sceneGraph.Triangles[triangle.TriangleId] = new Core.Scene.Triangle(_sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
+                }
+                else if (assertion is Core.Assertions.GrabScreenshot)
+                {
+                    yield return new RenderCommands.GrabScreenshot(_renderWindow, _cancellationTokenManager);
+                }
+                else if (assertion is Core.Assertions.Texture texture)
+                {
+                    // Pre-load texture to avoid doing this in the function setting OpenGL state
+                    var loadedImage = await _imageLoader.LoadImage(new Uri(texture.Uri));
+                    _sceneGraph.Textures[texture.TextureId] = new Core.Scene.Texture(_sceneGraph, texture.TextureId, loadedImage.BufferRgba,
+                        loadedImage.Width, loadedImage.Height);
+                }
+                else if (assertion is TexCoords texCoords)
+                {
+                    _sceneGraph.SurfaceVertexTexCoords[texCoords.ObjectIdentifier] = texCoords;
+                }
+                else if (assertion is SurfaceColor surfaceColor)
+                {
+                    _sceneGraph.SurfaceVertexColors[surfaceColor.ObjectIdentifier] = surfaceColor.vertexColor;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown assertion type: {assertion.GetType()}");
+                }
             }
-        }
 
-        public Matrix4 GetViewMatrix(CameraOrientation cameraOrientation)
-        {
-            Vector3 eyePosition = new Vector3(cameraOrientation.CameraLocation.X, cameraOrientation.CameraLocation.Y, cameraOrientation.CameraLocation.Z);
-            Vector3 eyeVector = new Vector3(cameraOrientation.CameraDirection.dX, cameraOrientation.CameraDirection.dY, cameraOrientation.CameraDirection.dZ);
-            Vector3 upVector = new Vector3(cameraOrientation.UpDirection.dX, cameraOrientation.UpDirection.dY, cameraOrientation.UpDirection.dZ);
-            var target = eyePosition + eyeVector;
-            return Matrix4.LookAt(eyePosition, target, upVector);
+            // TODO: Implement buffer streaming: https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+            // Test code: Only return RenderSceneGraph once after first batch
+            if (!hasTriangleBuffer)
+            {
+                yield return new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, _sceneGraph);
+                hasTriangleBuffer = true;
+            }
         }
     }
 }

@@ -5,14 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Trl_3D.OpenTk.RenderCommands;
-using Trl_3D.Core.Scene;
-using Trl_3D.Core.Abstractions;
-
 using OpenTK.Graphics.OpenGL4;
+
 using Trl_3D.OpenTk.Shaders;
 using Trl_3D.OpenTk.Textures;
-using Trl_3D.OpenTk.AssertionProcessor;
+using Trl_3D.Core.Abstractions;
 
 namespace Trl_3D.OpenTk
 {
@@ -53,30 +50,26 @@ namespace Trl_3D.OpenTk
             _windowSizeChanged = true;
         }
 
-        public void UpdateState(Core.Scene.ISceneGraphUpdate sceneGraphUpdate)
+        public void UpdateState(IRenderCommand renderCommand)
         {
-            if (sceneGraphUpdate is ViewMatrixUpdate viewMatrixUpdate)
+            RemoveExistingCommand(renderCommand.GetType());
+            InsertCommandInRenderOrder(renderCommand);
+            renderCommand.SetState();
+        }
+
+        private void RemoveExistingCommand(Type type)
+        {
+            var currentNode = _renderList.First;
+            while (currentNode != null)
             {
-                _renderInfo.ViewMatrix = viewMatrixUpdate.NewViewMatrix;
-            }
-            else if (sceneGraphUpdate is ContentUpdate contentUpdate)
-            {
-                // TODO: Add differential rendering for sub-updates
-
-                _renderList.Clear();
-
-                InsertCommandInRenderOrder(new ClearColor(contentUpdate.SceneGraph.RgbClearColor));
-                InsertCommandInRenderOrder(new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, contentUpdate.SceneGraph));
-                InsertCommandInRenderOrder(new GrabScreenshot(_renderWindow, _cancellationTokenManager));
-
-                foreach (var command in _renderList)
+                var renderCommand = currentNode.Value;
+                var next = currentNode.Next;
+                if (type == renderCommand.GetType())
                 {
-                    command.SetState();
+                    (renderCommand as IDisposable)?.Dispose();
+                    _renderList.Remove(currentNode);
                 }
-            }
-            else
-            {
-                throw new Exception($"Unknown scene graph update of type {sceneGraphUpdate.GetType().FullName} given.");
+                currentNode = next;
             }
         }
 

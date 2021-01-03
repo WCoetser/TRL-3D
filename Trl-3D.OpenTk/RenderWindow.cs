@@ -9,6 +9,7 @@ using OpenTK.Graphics.OpenGL4;
 using Trl_3D.Core.Events;
 using System.Threading.Tasks;
 using Trl_3D.Core.Scene;
+using Trl_3D.OpenTk.RenderCommands;
 
 namespace Trl_3D.OpenTk
 {
@@ -18,7 +19,7 @@ namespace Trl_3D.OpenTk
         private OpenGLSceneProcessor _openGLSceneProcessor;
         private ICancellationTokenManager _cancellationTokenManager;
 
-        public Channel<ISceneGraphUpdate> SceneGraphUpdatesChannel { get; private set; }
+        public Channel<IRenderCommand> RenderCommandUpdatesChannel { get; private set; }
 
         public Channel<IEvent> EventChannel { get; private set; }
 
@@ -31,7 +32,7 @@ namespace Trl_3D.OpenTk
             RenderFrame += MainWindowRenderFrame;
             UpdateFrame += MainWindowUpdateFrame;
 
-            SceneGraphUpdatesChannel = Channel.CreateUnbounded<ISceneGraphUpdate>();
+            RenderCommandUpdatesChannel = Channel.CreateUnbounded<IRenderCommand>();
             EventChannel = Channel.CreateUnbounded<IEvent>();
         }
 
@@ -42,16 +43,15 @@ namespace Trl_3D.OpenTk
             {
                 await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.CancellationToken).AsTask();
             });
-            task.Wait();
+            task.Wait(_cancellationTokenManager.CancellationToken);
         }
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
-            // TODO: Add differential rendering
             // This should only update the OpenGL state when there are inputs in the scene graph update channel
-            while (SceneGraphUpdatesChannel.Reader.TryRead(out ISceneGraphUpdate sceneGraphUpdate))
+            while (RenderCommandUpdatesChannel.Reader.TryRead(out IRenderCommand renderCommand))
             {
-                _openGLSceneProcessor.UpdateState(sceneGraphUpdate);
+                _openGLSceneProcessor.UpdateState(renderCommand);
             }
 
             _openGLSceneProcessor.Render(e.Time);

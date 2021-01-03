@@ -35,7 +35,6 @@ namespace Trl_3D.SampleApp
                 {
                     // Initial setup
                     new ClearColor(0.1f, 0.1f, 0.2f),
-                    new GrabScreenshot(),                    
                     //CameraOrientation.Default,
 
                     // Images

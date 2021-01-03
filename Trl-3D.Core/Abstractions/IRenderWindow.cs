@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Threading.Channels;
-using Trl_3D.Core.Scene;
 
 namespace Trl_3D.Core.Abstractions
 {
     public interface IRenderWindow
     {
-        /// <summary>
-        /// Channel for receiving updates to the current scene graph.
-        /// </summary>
-        Channel<ISceneGraphUpdate> SceneGraphUpdatesChannel { get; }
+        public Channel<IRenderCommand> RenderCommandUpdatesChannel { get; }
 
         /// <summary>
         /// Channel for events going out of the 3D engine, ex. mouse, keyboard, screenshot

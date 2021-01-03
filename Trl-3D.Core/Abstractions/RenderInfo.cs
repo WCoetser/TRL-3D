@@ -11,7 +11,5 @@ namespace Trl_3D.Core.Abstractions
         public int Width { get; set; }
 
         public int Height { get; set; }
-
-        public Matrix4 ViewMatrix { get; set; } = Matrix4.Identity;
     }
 }

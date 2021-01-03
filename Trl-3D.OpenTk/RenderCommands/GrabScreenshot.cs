@@ -33,7 +33,7 @@ namespace Trl_3D.OpenTk.RenderCommands
 
             var screenCaptureEvent = new ScreenCaptureEvent(backBufferDump, renderInfo.Width, renderInfo.Height);
             var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent, _cancellationTokenManager.CancellationToken).AsTask();
-            t.Wait();
+            t.Wait(_cancellationTokenManager.CancellationToken);
         }
 
         public void SetState()

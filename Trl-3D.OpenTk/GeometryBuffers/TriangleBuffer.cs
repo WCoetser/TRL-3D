@@ -11,7 +11,6 @@ using System.Buffers;
 using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
-using System.Reflection;
 using System.IO;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
@@ -24,6 +23,7 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         private readonly ILogger _logger;
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
+        private readonly SceneGraph _sceneGraph;
 
         // OpenGL object IDs
         private int _vertexArrayObject;
@@ -35,7 +35,9 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         private float[] _vertexBuffer;
         private int _triangleCount;
         private uint[] _vertexIndexBuffer;
-        private List<Textures.Texture> _activeTextures;
+        
+        private List<Core.Scene.Texture> _activeTextures;
+        private List<Textures.Texture> _renderTextures;
 
         private ShaderProgram _shaderProgram;
 
@@ -53,16 +55,17 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             _logger = logger;
             _shaderCompiler = shaderCompiler;
             _textureLoader = textureLoader;
+            _sceneGraph = sceneGraph;
 
-            BuildBuffer(sceneGraph, triangleAssertionsToRender);
+            BuildBuffer(triangleAssertionsToRender);
         }
 
-        private void BuildBuffer(SceneGraph sceneGraph, IEnumerable<Core.Scene.Triangle> triangleAssertionsToRender)
+        private void BuildBuffer(IEnumerable<Core.Scene.Triangle> triangleAssertionsToRender)
         {
             // This dictionary keeps track of existing mapped textures in order to re-use them where appropriate
             var textureObjectIdToShaderIndex = new EqualityComparerMapper<ulong>(EqualityComparer<ulong>.Default);
 
-            _activeTextures = new List<Textures.Texture>();
+            _activeTextures = new List<Core.Scene.Texture>();
 
             var vertexIndexBufferWriter = new ArrayBufferWriter<uint>();
             var vertexBufferWriter = new ArrayBufferWriter<float>();
@@ -75,18 +78,18 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
                 uint loadVertexPosition(Core.Scene.Vertex v)
                 {
-                    sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
-                    sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
+                    _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
+                    _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
 
                     ulong? textureSamplerIndex = null;
 
                     if (texCoords != default)
                     {
                         var textureId = texCoords.TextureId;
-                        if (sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture)
+                        if (_sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture)
                             && !textureObjectIdToShaderIndex.TryGetMappedValue(texture.ObjectId, out textureSamplerIndex))
                         {
-                            _activeTextures.Add(_textureLoader.LoadTexture(texture));
+                            _activeTextures.Add(texture);
                             textureSamplerIndex = textureObjectIdToShaderIndex.Map(texture.ObjectId);
                         }
                     }
@@ -132,8 +135,14 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             _vertexIndexBuffer = vertexIndexBufferWriter.WrittenMemory.ToArray();
         }
 
-        public void SetState()
+        public void SetState()        
         {
+            _renderTextures = new List<Textures.Texture>();
+            foreach (var texture in _activeTextures)
+            {
+                _renderTextures.Add(_textureLoader.LoadTexture(texture));
+            }
+
             _maxFragmentShaderTextureUnits = GL.GetInteger(GetPName.MaxTextureImageUnits);
             _shaderProgram = _shaderCompiler.Compile(GetVertexShaderCode(), GetFragmentShaderCode());
             _logger.LogInformation($"Maximum number of fragment shader texture image units = {_maxFragmentShaderTextureUnits}");
@@ -201,15 +210,15 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
         public void Render(RenderInfo info)
         {
-            for (int i = 0; i < _activeTextures.Count; i++)
+            for (int i = 0; i < _renderTextures.Count; i++)
             {
-                GL.BindTextureUnit((uint)i, _activeTextures[i].OpenGLTextureId);
+                GL.BindTextureUnit((uint)i, _renderTextures[i].OpenGLTextureId);
             }
 
             GL.UseProgram(_shaderProgram.ProgramId);
 
             // Set the view matrix for world coordinates to camera coordinates transformation
-            _shaderProgram.SetUniform("viewMatrix", info.ViewMatrix);
+            _shaderProgram.SetUniform("viewMatrix", _sceneGraph.ViewMatrix);
 
             // This is must be here, otherwise the first bound image from BindTextureUnit will display instead of the one that is actually bound
             var samplerArray = Enumerable.Range(0, _maxFragmentShaderTextureUnits).ToArray();
@@ -223,9 +232,12 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         public void Dispose()
         {
             _shaderProgram?.Dispose();
+
             GL.DeleteVertexArrays(1, ref _vertexArrayObject);
             GL.DeleteBuffer(_vertexBufferObject);
             GL.DeleteBuffer(_vertexIndexBufferId);
+
+            _renderTextures?.ForEach(tex => tex.Dispose());
         }
 
         private string GetFragmentShaderCode()

@@ -44,7 +44,8 @@ namespace Trl_3D.SampleApp
         public async Task StartEventProcessor()
         {
             _logger.LogInformation("EventProcessor started");
-            await foreach (var currenEvent in _renderWindow.EventChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken))
+            await foreach (var currenEvent in _renderWindow.EventChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken)
+                .WithCancellation(_cancellationTokenManager.CancellationToken))
             {
                 try
                 {
@@ -75,10 +76,25 @@ namespace Trl_3D.SampleApp
 
         private async Task ProcessUserEvent(UserInputStateEvent userInputEvent)
         {
+            // Escape = quit
             if (userInputEvent.KeyboardState.WasKeyDown(Keys.Escape))
             {
                 _renderWindow.Close();
             }
+
+            // Take screenshot
+            if (userInputEvent.KeyboardState.WasKeyDown(Keys.S))
+            {
+                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
+                {
+                    Assertions = new IAssertion[]
+                    {
+                        new GrabScreenshot()
+                    }
+                });                
+            }
+
+            // Move left & right
             bool hasLeft = userInputEvent.KeyboardState.IsKeyDown(Keys.A);
             bool hasRight = userInputEvent.KeyboardState.IsKeyDown(Keys.D);
             if (hasLeft || hasRight)

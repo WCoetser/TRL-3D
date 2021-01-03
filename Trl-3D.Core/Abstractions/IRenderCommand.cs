@@ -1,7 +1,4 @@
-﻿using System;
-using Trl_3D.Core.Abstractions;
-
-namespace Trl_3D.OpenTk.RenderCommands
+﻿namespace Trl_3D.Core.Abstractions
 {
     public interface IRenderCommand
     {
@@ -16,7 +13,7 @@ namespace Trl_3D.OpenTk.RenderCommands
         bool SelfDestruct { get; }
 
         /// <summary>
-        /// Generates buffers, prepare for rendering with <see cref="Render(RenderInfo)"/>
+        /// Generates buffers, prepare for rendering."/>
         /// </summary>
         void SetState();
 
@@ -24,6 +21,6 @@ namespace Trl_3D.OpenTk.RenderCommands
         /// Shows state from <see cref="SetState"/>
         /// </summary>
         /// <param name="renderInfo"></param>
-        void Render(RenderInfo renderInfo);
+        void Render(RenderInfo renderInfo);        
     }
 }
