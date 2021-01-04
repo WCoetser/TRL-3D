@@ -145,6 +145,9 @@ namespace Trl_3D.OpenTk
                     disposable.Dispose();
                 }
             }
+
+            _textureLoader.Dispose();
+
             _logger.LogInformation("Render commands disposed");
         }
     }

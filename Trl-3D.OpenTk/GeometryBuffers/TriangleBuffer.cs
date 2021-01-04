@@ -236,8 +236,6 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             GL.DeleteVertexArrays(1, ref _vertexArrayObject);
             GL.DeleteBuffer(_vertexBufferObject);
             GL.DeleteBuffer(_vertexIndexBufferId);
-
-            _renderTextures?.ForEach(tex => tex.Dispose());
         }
 
         private string GetFragmentShaderCode()

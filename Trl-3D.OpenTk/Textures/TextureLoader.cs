@@ -1,11 +1,25 @@
 ﻿using OpenTK.Graphics.OpenGL4;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Trl_3D.OpenTk.Textures
 {
     public class TextureLoader : ITextureLoader
     {
+        private readonly Dictionary<ulong, Texture> _knownTextures;
+
+        public TextureLoader()
+        {
+            _knownTextures = new Dictionary<ulong, Texture>();
+        }
+
         public Texture LoadTexture(Core.Scene.Texture texture)
         {
+            if (_knownTextures.TryGetValue(texture.ObjectId, out Texture textureOut))
+            {
+                return textureOut;
+            }
+
             var textureIds = new uint[1];
             GL.GenTextures(1, textureIds);
             GL.BindTexture(TextureTarget.Texture2D, textureIds[0]);
@@ -22,10 +36,21 @@ namespace Trl_3D.OpenTk.Textures
 
             // TODO: Gen mipmaps, update min and mag filter
 
-            return new Texture {
+            textureOut = new Texture
+            {
                 ObjectId = texture.ObjectId,
-                OpenGLTextureId = textureIds[0]                
+                OpenGLTextureId = textureIds[0]
             };
+
+            _knownTextures.Add(texture.ObjectId, textureOut);
+
+            return textureOut;
+        }
+
+        public void Dispose()
+        {
+            var deleteList = _knownTextures.Values.Select(t => t.OpenGLTextureId).ToArray();
+            GL.DeleteTextures(deleteList.Length, deleteList);
         }
     }
 }
