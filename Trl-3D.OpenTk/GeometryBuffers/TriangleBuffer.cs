@@ -168,32 +168,32 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
             // Vertex ID
             const int layout_pos_vertexId = 0;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexId);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexId);
             GL.VertexAttribPointer(layout_pos_vertexId, 3, VertexAttribPointerType.Float, false, stride, 0);
 
             // Surface ID
             const int layout_pos_surfaceId = 1;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_surfaceId);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_surfaceId);
             GL.VertexAttribPointer(layout_pos_surfaceId, 3, VertexAttribPointerType.Float, false, stride, sizeof(float));
 
             // Vertex position
             const int layout_pos_vertexPosition = 2;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexPosition);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexPosition);
             GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2 * sizeof(float));
 
             // Vertex colour
             const int layout_pos_vertexColor = 3;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_pos_vertexColor);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexColor);
             GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
 
             // Texture coordinates
             const int layout_tex_coords = 4;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_tex_coords);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_tex_coords);
             GL.VertexAttribPointer(layout_tex_coords, 2, VertexAttribPointerType.Float, false, stride, 9 * sizeof(float));
 
             // Sampler index
             const int layout_sampler_index = 5;
-            GL.EnableVertexArrayAttrib(buffers[0], layout_sampler_index);
+            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_sampler_index);
             GL.VertexAttribPointer(layout_sampler_index, 1, VertexAttribPointerType.Float, false, stride, 11 * sizeof(float));
 
             // Vertex index buffer for triangles

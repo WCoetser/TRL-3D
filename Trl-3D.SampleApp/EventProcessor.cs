@@ -28,6 +28,8 @@ namespace Trl_3D.SampleApp
 
         private CameraOrientation _currentCameraOrientation;
 
+        bool screenshotEnqueued = false;
+
         public EventProcessor(IRenderWindow renderWindow, 
                             ILogger<EventProcessor> logger, 
                             ICancellationTokenManager cancellationTokenManager, 
@@ -85,13 +87,17 @@ namespace Trl_3D.SampleApp
             // Take screenshot
             if (userInputEvent.KeyboardState.WasKeyDown(Keys.S))
             {
-                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
+                if (!screenshotEnqueued)
                 {
-                    Assertions = new IAssertion[]
+                    await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
                     {
-                        new GrabScreenshot()
-                    }
-                });                
+                        Assertions = new IAssertion[]
+                        {
+                            new GrabScreenshot()
+                        }
+                    });
+                    screenshotEnqueued = true;
+                }
             }
 
             // Move left & right

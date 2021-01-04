@@ -29,7 +29,7 @@ namespace Trl_3D.SampleApp
             string image = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail.jpg";
             string image2 = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail_2.jpg";
 
-            var batch = new AssertionBatch
+            var batch1 = new AssertionBatch
             {
                 Assertions = new IAssertion[]
                 {
@@ -70,7 +70,28 @@ namespace Trl_3D.SampleApp
             };
 
             // Send the assertions to the rendering system
-            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch, _cancellationTokenManager.CancellationToken);
-        }        
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.CancellationToken);
+
+            // Render second test batch
+            var batch2 = new AssertionBatch
+            {
+                Assertions = new IAssertion[]
+                {
+                    // Define vertices
+                    new Vertex(9, new Coordinate3d(-0.33f, 0.0f, -1.0f)),
+                    new Vertex(10, new Coordinate3d(0.33f, 0.0f, -1.0f)),
+                    new Vertex(11, new Coordinate3d(0.0f,  -0.33f, -1.0f)),
+
+                    // Bottom left triangle
+                    new Triangle(12, (9, 10, 11)),
+                    new SurfaceColor((12, 9), new ( 1.0f, 1.0f, 0.0f, 1.0f)),
+                    new SurfaceColor((12, 10), new ( 0.0f, 1.0f, 1.0f, 1.0f)),
+                    new SurfaceColor((12, 11), new ( 1.0f, 0.0f, 1.0f, 1.0f))
+                }
+            };
+
+            // Send the assertions to the rendering system
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch2, _cancellationTokenManager.CancellationToken);
+        }
     }
 }

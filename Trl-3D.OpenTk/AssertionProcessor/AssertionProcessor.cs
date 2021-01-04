@@ -24,8 +24,6 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
 
-        bool hasTriangleBuffer = false;
-
         public Channel<AssertionBatch> AssertionUpdatesChannel { get; private set; }
 
         public AssertionProcessor(IImageLoader imageLoader,
@@ -59,7 +57,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                     continue;
                 }
 
-                // Scene graph is updated per batch to group together updates
+                // Scene graph is updated per batch to group updates together and manage vertex buffers
                 try
                 {
                     await foreach (var renderCommand in Process(assertionBatch)
@@ -87,6 +85,8 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         /// </summary>
         public async IAsyncEnumerable<IRenderCommand> Process(AssertionBatch assertionBatch)
         {
+            Lazy<List<Core.Scene.Triangle>> renderTriangles = new Lazy<List<Core.Scene.Triangle>>();
+
             foreach (var assertion in assertionBatch.Assertions)
             {
                 if (assertion is Core.Assertions.ClearColor clearColor)
@@ -113,7 +113,9 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 }
                 else if (assertion is Core.Assertions.Triangle triangle)
                 {
-                    _sceneGraph.Triangles[triangle.TriangleId] = new Core.Scene.Triangle(_sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
+                    var newTriangle = new Core.Scene.Triangle(_sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
+                    renderTriangles.Value.Add(newTriangle);
+                    _sceneGraph.Triangles[triangle.TriangleId] = newTriangle;
                 }
                 else if (assertion is Core.Assertions.GrabScreenshot)
                 {
@@ -141,11 +143,10 @@ namespace Trl_3D.OpenTk.AssertionProcessor
             }
 
             // TODO: Implement buffer streaming: https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-            // Test code: Only return RenderSceneGraph once after first batch
-            if (!hasTriangleBuffer)
+            // TODO: Detect when triangle information is incomplete and place on "watch list"
+            if (renderTriangles.Value.Any())
             {
-                yield return new RenderSceneGraph(_logger, _shaderCompiler, _textureLoader, _sceneGraph);
-                hasTriangleBuffer = true;
+                yield return new RenderTriangleBuffer(_logger, _shaderCompiler, _textureLoader, _sceneGraph, renderTriangles.Value);
             }
         }
     }

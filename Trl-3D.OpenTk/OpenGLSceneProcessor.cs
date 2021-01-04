@@ -52,25 +52,15 @@ namespace Trl_3D.OpenTk
 
         public void UpdateState(IRenderCommand renderCommand)
         {
-            RemoveExistingCommand(renderCommand.GetType());
-            InsertCommandInRenderOrder(renderCommand);
             renderCommand.SetState();
-        }
 
-        private void RemoveExistingCommand(Type type)
-        {
-            var currentNode = _renderList.First;
-            while (currentNode != null)
+            var err = GL.GetError();
+            if (err != ErrorCode.NoError)
             {
-                var renderCommand = currentNode.Value;
-                var next = currentNode.Next;
-                if (type == renderCommand.GetType())
-                {
-                    (renderCommand as IDisposable)?.Dispose();
-                    _renderList.Remove(currentNode);
-                }
-                currentNode = next;
+                throw new Exception($"Set state: {err}");
             }
+
+            InsertCommandInRenderOrder(renderCommand);
         }
 
         private void InsertCommandInRenderOrder(IRenderCommand command)
@@ -121,13 +111,13 @@ namespace Trl_3D.OpenTk
             var currentNode = _renderList.First;
             while (currentNode != null)
             {
-                var assertion = currentNode.Value;
-                assertion.Render(_renderInfo);
+                var command = currentNode.Value;
+                command.Render(_renderInfo);
                 var next = currentNode.Next;
-                if (assertion.SelfDestruct)
+                if (command.SelfDestruct)
                 {
                     _renderList.Remove(currentNode);
-                    if (assertion is IDisposable disposable)
+                    if (command is IDisposable disposable)
                     {
                         disposable.Dispose();
                     }                    
@@ -138,9 +128,9 @@ namespace Trl_3D.OpenTk
 
         public void ReleaseResources()
         {
-            foreach (var assertion in _renderList)
+            foreach (var command in _renderList)
             {
-                if (assertion is IDisposable disposable)
+                if (command is IDisposable disposable)
                 {
                     disposable.Dispose();
                 }
