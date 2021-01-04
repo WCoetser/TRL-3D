@@ -2,7 +2,7 @@
 using Trl_3D.Core.Abstractions;
 
 namespace Trl_3D.Core.Assertions
-{
+{   
     public record ClearColor(float Red, float Green, float Blue): IAssertion;
 
     public record GrabScreenshot() : IAssertion;    
@@ -40,5 +40,5 @@ namespace Trl_3D.Core.Assertions
     /// Sets the projection used.
     /// Configures the projection matrix.
     /// </summary>
-    public record CameraProjection() : IAssertion;
+    public record CameraProjectionPerspective(float FieldOfViewVerticalDegrees, float NearPlane, float FarPlane) : IAssertion;
 }

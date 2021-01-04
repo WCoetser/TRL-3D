@@ -23,7 +23,7 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         private readonly ILogger _logger;
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
-        private readonly SceneGraph _sceneGraph;
+        private readonly SceneGraph _sceneGraph;        
 
         // OpenGL object IDs
         private int _vertexArrayObject;
@@ -217,8 +217,9 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
             GL.UseProgram(_shaderProgram.ProgramId);
 
-            // Set the view matrix for world coordinates to camera coordinates transformation
+            // Set camera location and projection
             _shaderProgram.SetUniform("viewMatrix", _sceneGraph.ViewMatrix);
+            _shaderProgram.SetUniform("projectionMatrix", _sceneGraph.ProjectionMatrix);
 
             // This is must be here, otherwise the first bound image from BindTextureUnit will display instead of the one that is actually bound
             var samplerArray = Enumerable.Range(0, _maxFragmentShaderTextureUnits).ToArray();

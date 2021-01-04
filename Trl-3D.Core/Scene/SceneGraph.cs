@@ -1,6 +1,5 @@
 ﻿using OpenTK.Mathematics;
 using System.Collections.Generic;
-using System.Linq;
 using Trl_3D.Core.Assertions;
 
 namespace Trl_3D.Core.Scene
@@ -19,6 +18,7 @@ namespace Trl_3D.Core.Scene
         public Dictionary<(ulong triangleId, ulong vertexId), TexCoords> SurfaceVertexTexCoords { get; }
         public Dictionary<(ulong triangleId, ulong vertexId), ColorRgba> SurfaceVertexColors { get; }
         public Matrix4 ViewMatrix { get; set; }
+        public Matrix4 ProjectionMatrix { get; set; }
 
         public SceneGraph()
         {
@@ -29,20 +29,7 @@ namespace Trl_3D.Core.Scene
             SurfaceVertexTexCoords = new Dictionary<(ulong triangleId, ulong vertexId), TexCoords>();
             SurfaceVertexColors = new Dictionary<(ulong triangleId, ulong vertexId), ColorRgba>();
             ViewMatrix = CameraOrientation.Default.ToMatrix();
-        }
-
-        public IEnumerable<Triangle> GetCompleteTriangles()
-        {
-            return Triangles.Where(pair => IsTriangleReady(pair.Key))
-                .Select(pair => pair.Value);
-        }
-
-        private bool IsTriangleReady(ulong triangleId)
-        {
-            return Triangles.TryGetValue(triangleId, out Triangle triangle)
-                && Vertices.ContainsKey(triangle.VertexIds.VertexId1)
-                && Vertices.ContainsKey(triangle.VertexIds.VertexId2)
-                && Vertices.ContainsKey(triangle.VertexIds.VertexId3);
-        }
+            ProjectionMatrix = Matrix4.Identity;
+        }               
     }
 }

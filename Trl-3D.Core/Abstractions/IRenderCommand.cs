@@ -15,7 +15,7 @@
         /// <summary>
         /// Generates buffers, prepare for rendering."/>
         /// </summary>
-        void SetState();
+        void SetState(RenderInfo renderInfo);
 
         /// <summary>
         /// Shows state from <see cref="SetState"/>

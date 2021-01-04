@@ -15,7 +15,9 @@ namespace Trl_3D.SampleApp
         private readonly IAssertionProcessor _scene;
         private readonly ICancellationTokenManager _cancellationTokenManager;
 
-        public SceneLoader(ILogger<SceneLoader> logger, IAssertionProcessor scene, ICancellationTokenManager cancellationTokenManager)
+        public SceneLoader(ILogger<SceneLoader> logger, 
+                            IAssertionProcessor scene, 
+                            ICancellationTokenManager cancellationTokenManager)
         {
             _logger = logger;
             _scene = scene;
@@ -35,7 +37,8 @@ namespace Trl_3D.SampleApp
                 {
                     // Initial setup
                     new ClearColor(0.1f, 0.1f, 0.2f),
-                    //CameraOrientation.Default,
+                    Constants.DefaultCameraOrientation,
+                    new CameraProjectionPerspective(90, 0.3f, 3),
 
                     // Images
                     new Texture(100, image),

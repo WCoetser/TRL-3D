@@ -7,13 +7,15 @@ layout (location = 3) in vec4 vertexColorIn;
 layout (location = 4) in vec2 texCoordsIn;
 layout (location = 5) in float samplerIndexIn;
 
-out float vertexId;
+float vertexId; // this will not work in the fragment shader, therefore no "out"
+
 out float surfaceId;
 out vec4 vertexColor;
 out vec2 texCoords;
 out float samplerIndex;
 
 uniform mat4 viewMatrix;
+uniform mat4 projectionMatrix;
 
 void main()
 {
@@ -23,5 +25,5 @@ void main()
     texCoords = texCoordsIn;
     samplerIndex = samplerIndexIn;
 
-    gl_Position = viewMatrix * vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * vec4(vertexPosition.x, vertexPosition.y, vertexPosition.z, 1.0);
 }

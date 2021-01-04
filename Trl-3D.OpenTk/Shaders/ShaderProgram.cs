@@ -15,8 +15,8 @@ namespace Trl_3D.OpenTk.Shaders
 
         public void SetUniform(string name, Matrix4 matrix)
         {
-            var viewMatrixLocation = GL.GetUniformLocation(ProgramId, name);
-            GL.UniformMatrix4(viewMatrixLocation, false, ref matrix);
+            var matrixLocation = GL.GetUniformLocation(ProgramId, name);
+            GL.UniformMatrix4(matrixLocation, false, ref matrix);
         }
 
         public void SetUniform(string name, int[] values)

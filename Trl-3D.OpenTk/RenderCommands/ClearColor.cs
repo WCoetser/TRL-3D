@@ -20,11 +20,9 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         public void Render(RenderInfo renderInfo)
         {
-            // TODO: Refactor depth buffer out
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
         }
 
-        public void SetState()
+        public void SetState(RenderInfo renderInfo)
         {
             GL.ClearColor(_clearColor.Red, _clearColor.Green, _clearColor.Blue, 1.0f);
         }

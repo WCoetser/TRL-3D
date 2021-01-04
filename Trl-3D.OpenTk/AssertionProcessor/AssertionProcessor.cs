@@ -94,6 +94,12 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                     _sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
                     yield return new RenderCommands.ClearColor(_sceneGraph.RgbClearColor);
                 }
+                else if (assertion is CameraProjectionPerspective projectionPerspective)
+                {
+                    // Projection matrix is set in uniforms
+                    yield return new RenderCommands.SetProjectionMatrix(_sceneGraph, projectionPerspective.FieldOfViewVerticalDegrees, 
+                        projectionPerspective.NearPlane, projectionPerspective.FarPlane);
+                }
                 else if (assertion is CameraOrientation cameraOrientation)
                 {
                     // View matrix is set in uniforms

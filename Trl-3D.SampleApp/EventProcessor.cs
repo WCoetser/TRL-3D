@@ -39,7 +39,7 @@ namespace Trl_3D.SampleApp
             _logger = logger;
             _cancellationTokenManager = cancellationTokenManager;
             _scene = scene;
-            _currentCameraOrientation = CameraOrientation.Default;
+            _currentCameraOrientation = Constants.DefaultCameraOrientation;
             _logger.LogInformation("EventProcessor created");
         }
         
@@ -101,25 +101,43 @@ namespace Trl_3D.SampleApp
             }
 
             // Move left & right
-            bool hasLeft = userInputEvent.KeyboardState.IsKeyDown(Keys.A);
-            bool hasRight = userInputEvent.KeyboardState.IsKeyDown(Keys.D);
-            if (hasLeft || hasRight)
+            bool hasLeft = userInputEvent.KeyboardState.IsKeyDown(Keys.Left);
+            bool hasRight = userInputEvent.KeyboardState.IsKeyDown(Keys.Right);
+            bool hasForward = userInputEvent.KeyboardState.IsKeyDown(Keys.Up);
+            bool hasBackward = userInputEvent.KeyboardState.IsKeyDown(Keys.Down);
+
+            // TODO: Cleanup
+            if (hasLeft || hasRight || hasForward || hasBackward)
             {
                 var dX = (hasLeft, hasRight) switch {
                     (true, false) => -1.0f,
                     (false, true) => 1.0f,
                     _ => 0.0f
                 };
-                dX *= (float)userInputEvent.TimeSinceLastEventSeconds;
-                Vector3 moveVec = new (-1,0,0); // we are looking in the negative z direction, therefore "right" is -1
-                moveVec *= dX;
-                Vector3 newLocation = _currentCameraOrientation.CameraLocation.ToOpenTkVec3() + moveVec;
+
+                var dZ = (hasForward, hasBackward) switch
+                {
+                    (true, false) => -1.0f,
+                    (false, true) => 1.0f,
+                    _ => 0.0f
+                };
+
+                // Left/Right
+                dX *= (float)userInputEvent.TimeSinceLastEventSeconds;                
+                Vector3 moveVecLeftRight = new (-1,0,0); // we are looking in the negative z direction, therefore "right" is -1
+                moveVecLeftRight *= dX;
+
+                // Forward/Backward
+                dZ *= (float)userInputEvent.TimeSinceLastEventSeconds;
+                Vector3 moveVecForwardBackward = new(0, 0, -1); // forward = -z
+                moveVecForwardBackward *= dZ;
+
+                Vector3 newLocation = _currentCameraOrientation.CameraLocation.ToOpenTkVec3() + moveVecLeftRight + moveVecForwardBackward;
 
                 _currentCameraOrientation = _currentCameraOrientation with
                 {
                     CameraLocation = new (newLocation.X, newLocation.Y, newLocation.Z)
                 };
-
                 await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
                 {
                     Assertions = new IAssertion[]

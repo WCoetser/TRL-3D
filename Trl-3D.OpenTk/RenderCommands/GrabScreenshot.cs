@@ -36,7 +36,7 @@ namespace Trl_3D.OpenTk.RenderCommands
             t.Wait(_cancellationTokenManager.CancellationToken);
         }
 
-        public void SetState()
+        public void SetState(RenderInfo renderInfo)
         {
             // nothiong to do here
         }

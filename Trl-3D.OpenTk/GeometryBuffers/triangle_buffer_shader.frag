@@ -1,6 +1,6 @@
 ﻿#version 450 core
 
-in float vertexId;
+//in float vertexId; // this will not work in the fragment shader
 in float surfaceId;
 in vec4 vertexColor;
 in vec2 texCoords;

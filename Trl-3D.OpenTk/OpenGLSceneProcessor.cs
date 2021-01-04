@@ -52,7 +52,7 @@ namespace Trl_3D.OpenTk
 
         public void UpdateState(IRenderCommand renderCommand)
         {
-            renderCommand.SetState();
+            renderCommand.SetState(_renderInfo);
 
             var err = GL.GetError();
             if (err != ErrorCode.NoError)
@@ -107,6 +107,8 @@ namespace Trl_3D.OpenTk
             {
                 return;
             }
+
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             var currentNode = _renderList.First;
             while (currentNode != null)

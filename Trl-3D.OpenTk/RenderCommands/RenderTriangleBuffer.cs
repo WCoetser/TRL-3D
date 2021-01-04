@@ -25,12 +25,12 @@ namespace Trl_3D.OpenTk.RenderCommands
             _triangleBuffer = new TriangleBuffer(sceneGraph, triangles, logger, shaderCompiler, textureLoader);
         }
 
-        public void Render(RenderInfo info)
+        public void Render(RenderInfo renderInfo)
         {
-            _triangleBuffer.Render(info);
+            _triangleBuffer.Render(renderInfo);
         }
 
-        public void SetState()
+        public void SetState(RenderInfo renderInfo)
         {
             _triangleBuffer.SetState();
         }
