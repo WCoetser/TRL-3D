@@ -117,8 +117,8 @@ namespace Trl_3D.SampleApp
 
                 var dZ = (hasForward, hasBackward) switch
                 {
-                    (true, false) => -1.0f,
-                    (false, true) => 1.0f,
+                    (true, false) => 1.0f,
+                    (false, true) => -1.0f,
                     _ => 0.0f
                 };
 
