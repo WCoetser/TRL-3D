@@ -110,8 +110,8 @@ namespace Trl_3D.SampleApp
             if (hasLeft || hasRight || hasForward || hasBackward)
             {
                 var dX = (hasLeft, hasRight) switch {
-                    (true, false) => -1.0f,
-                    (false, true) => 1.0f,
+                    (true, false) => 1.0f,
+                    (false, true) => -1.0f,
                     _ => 0.0f
                 };
 
