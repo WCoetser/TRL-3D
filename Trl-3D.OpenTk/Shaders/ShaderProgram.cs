@@ -13,6 +13,8 @@ namespace Trl_3D.OpenTk.Shaders
             ProgramId = programId;
         }
 
+        public void UseProgram() => GL.UseProgram(ProgramId);
+
         public void SetUniform(string name, Matrix4 matrix)
         {
             var matrixLocation = GL.GetUniformLocation(ProgramId, name);

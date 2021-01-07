@@ -210,19 +210,17 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
         public void Render(RenderInfo info)
         {
-            for (int i = 0; i < _renderTextures.Count; i++)
-            {
-                GL.BindTextureUnit((uint)i, _renderTextures[i].OpenGLTextureId);
-            }
-
-            GL.UseProgram(_shaderProgram.ProgramId);
+            _shaderProgram.UseProgram();
 
             // Set camera location and projection
             _shaderProgram.SetUniform("viewMatrix", _sceneGraph.ViewMatrix);
             _shaderProgram.SetUniform("projectionMatrix", _sceneGraph.ProjectionMatrix);
 
+            // TODO: Remove ToArray()
+            GL.BindTextures(0, _renderTextures.Count, _renderTextures.Select(tex => tex.OpenGLTextureId).ToArray());
+
             // This is must be here, otherwise the first bound image from BindTextureUnit will display instead of the one that is actually bound
-            var samplerArray = Enumerable.Range(0, _maxFragmentShaderTextureUnits).ToArray();
+            var samplerArray = Enumerable.Range(0, _renderTextures.Count).ToArray();
             _shaderProgram.SetUniform("samplers", samplerArray);
 
             GL.BindVertexArray(_vertexArrayObject);
