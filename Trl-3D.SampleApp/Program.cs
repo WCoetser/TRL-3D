@@ -22,14 +22,15 @@ namespace Trl_3D.SampleApp
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
 
             ICancellationTokenManager cancellationTokenManager = null;
+            IHost host = Host.CreateDefaultBuilder(args)
+                .ConfigureServices(ConfigureServices)
+                .Build();
+
+            using var serviceScope = host.Services.CreateScope();
+            serviceProvider = serviceScope.ServiceProvider;
+
             try
             {
-                IHost host = Host.CreateDefaultBuilder(args)
-                    .ConfigureServices(ConfigureServices)
-                    .Build();
-
-                using var serviceScope = host.Services.CreateScope();
-                serviceProvider = serviceScope.ServiceProvider;
                 cancellationTokenManager = serviceProvider.GetRequiredService<ICancellationTokenManager>();
 
                 // Produce scene elements (assertions) on seperate thread using producer-consumer pattern
@@ -64,6 +65,12 @@ namespace Trl_3D.SampleApp
                 // This will be thrown when producer/consumer threads terminate due to cancellation tokens
                 // and can be safely ignored.
             }
+            catch (Exception ex)
+            {
+                // Note: Exceptions thrown in the try block will count as being handled in certain cases,
+                // ex. when the OpenGL version is not supported by the installed driver
+                UnhandledExceptionHandler(null, new UnhandledExceptionEventArgs(ex, true));
+            }
             finally
             {
                 AppDomain.CurrentDomain.UnhandledException -= UnhandledExceptionHandler;
@@ -94,9 +101,9 @@ namespace Trl_3D.SampleApp
                     dumpErrorNoLogger((Exception)e.ExceptionObject);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                dumpErrorNoLogger(ex);
+                dumpErrorNoLogger((Exception)e.ExceptionObject);
             }
         }
 
