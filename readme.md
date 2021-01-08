@@ -1,12 +1,78 @@
 # Overview
 
-**=== NB: Work in progress ===**
+>
+> NB: Work in progress
+> ===
 
-TRL-3D is a 3D graphics system build on C#, OpenTK, and OpenGL 4.5 that makes it easy to generate and render 3D content programatically, or with a text editor, without having to juggle OpenGL vertex buffers or open a 3D editor.
+TRL-3D is a system/API that makes it easier for C# programmers to access accelerated 3D graphics, using OpenGL 4.5 via the [OpenTk](https://github.com/opentk/opentk) library. The main features of TRL-3D are:
 
-Content is specified using batches of assertions (specifying things to render) and asynchronously processed. Events (ex. user input, screenshot) are asynchronously returned, making it possible to feed new assertions into the system. This is done using .NET multi-threaded Channel objects in order to provent the program "locking up" while rendering.
+* It specifies 3D content using batches of easy-to-use assertions.
+* It identifies objects (vertices, triangles etc.) using object IDs instead of object references. This allows partial content to be specified.
+* It is multi-threaded, with events being passed out of the rendering system, and assertions specifying content and render commands being passed in. In this is done via the [.NET Channel class](https://devblogs.microsoft.com/dotnet/an-introduction-to-system-threading-channels/).
+* It is abstracted from OpenGL in such a way that another rendering system (ex. Vulkan, DirectX) can be implemented in the future.
+* It uses .NET dependency injection and logging to create a clean maintainable system architecture.
 
-Assertions are identified by object IDs instead of internal .NET object references, making it possible to specify partially complete data, or to pass data over a network via a REST API. These assertions are transparently compiled into OpenGL objects (ex. vertex buffers, shaders etc.) The API consumer only needs to worry about the assertions.
+# Rendering a triangle
+
+The most fundamental concept in TRL-3D is the _assertion_. Assertions are statements about the world rather than render commands. Here is an example of a set of assertions that draws a triangle:
+
+```C#
+// Assertions are batched together for efficiency
+var batch = new AssertionBatch
+{
+    Assertions = new IAssertion[]
+    {
+        // Define vertices
+        new Vertex(9, new Coordinate3d(-0.33f, 0.0f, -1.0f)),
+        new Vertex(10, new Coordinate3d(0.33f, 0.0f, -1.0f)),
+        new Vertex(11, new Coordinate3d(0.0f,  -0.33f, -1.0f)),
+
+        // Define triangle
+        new Triangle(12, (9, 10, 11))
+    }
+};
+```
+
+First three vertices are defined. Each vertex contains an ID and coordinates. Then these vertices are grouped into a triangle. The rendering system works out that there is a complete triangle, loads it into a vertex buffer, and renders it on the screen. This is done transparently without programmer intervention. The result looks like this:
+
+![Code Coverage](simple_triangle.PNG)
+
+More assertions are supported for adding textures and colours. (See the sample app in this repository.)
+
+# Basic configuration
+
+Four basic interfaces ("services" when they are implemented for dependency injection) need to be implemented in order to use the system. These interfaces are:
+
+* `IEventProcessor` - This interface implementation receives events from the system, ex. keyboard, mouse, and screenshot events.
+* `IImageLoader` - This interface is called to load images. It is possible to use your own image loading library here.
+* `IAssertionLoader` - This interface implementation is used to specify and load content. Initially, this is where assertions will come from, however it is possible to pass assertions into the rendering system from the `IEventProcessor` implementation. (See sample code for full content -> event -> content cycle)
+* .NET logging must be configured, otherwise an error will be generated. Important information is logged via `ILogger`.
+
+The service configuration function may look like this: (Assuming Serilog is used)
+
+```C#
+public static void ConfigureServices(IServiceCollection services)
+{
+    // Logging
+    var logger = new LoggerConfiguration()
+                        .WriteTo.Console(Serilog.Events.LogEventLevel.Verbose)
+                        .CreateLogger();
+    services.AddLogging(builder => {
+        builder.ClearProviders();
+        builder.AddSerilog(logger);
+    });
+
+    // Library dependencies
+    services.AddTrl3DCore();
+    services.AddOpenTk();
+
+    services.AddSingleton<IAssertionLoader, SceneLoader>();
+    services.AddSingleton<IEventProcessor, EventProcessor>();
+    services.AddSingleton<IImageLoader, ImageLoader>();
+}
+
+```
+The shortest path to an implementation is to use the sample app as boilerplate.
 
 # Licences
 

@@ -68,7 +68,7 @@ namespace Trl_3D.SampleApp
             catch (Exception ex)
             {
                 // Note: Exceptions thrown in the try block will count as being handled in certain cases,
-                // ex. when the OpenGL version is not supported by the installed driver
+                // ex. when the OpenGL version is not supported by the installed driver, therefore this is needed
                 UnhandledExceptionHandler(null, new UnhandledExceptionEventArgs(ex, true));
             }
             finally
