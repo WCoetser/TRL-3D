@@ -9,6 +9,12 @@ namespace Trl_3D.Core.Abstractions
         protected ObjectIdentityBase(ulong objectId)
         {
             ObjectId = objectId;
+            // TODO: Increase width of objectID in vertex buffer by splitting it across multiple floats
+            const ulong max = (2u << 23) - 1;
+            if (objectId > max)
+            {
+                throw new System.ArgumentException($"ObjectID too large, current limit is {max} imposed by IEEE 754");
+            }
         }
 
         public override int GetHashCode() => GetHashCode(this);

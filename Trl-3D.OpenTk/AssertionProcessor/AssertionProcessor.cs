@@ -24,6 +24,8 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
 
+        private readonly LinkedList<Core.Scene.Triangle> _partialObjectsWatchList; // keep track of partial objects that may become complete in a future batch
+
         public Channel<AssertionBatch> AssertionUpdatesChannel { get; private set; }
 
         public AssertionProcessor(IImageLoader imageLoader,
@@ -44,6 +46,8 @@ namespace Trl_3D.OpenTk.AssertionProcessor
             _textureLoader = textureLoader;
 
             AssertionUpdatesChannel = Channel.CreateUnbounded<AssertionBatch>();
+
+            _partialObjectsWatchList = new LinkedList<Core.Scene.Triangle>();
         }
 
         public async Task StartAssertionConsumer()
@@ -85,8 +89,6 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         /// </summary>
         public async IAsyncEnumerable<IRenderCommand> Process(AssertionBatch assertionBatch)
         {
-            Lazy<List<Core.Scene.Triangle>> renderTriangles = new Lazy<List<Core.Scene.Triangle>>();
-
             foreach (var assertion in assertionBatch.Assertions)
             {
                 if (assertion is GetPickingInfo getPickingInfo)
@@ -124,7 +126,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 else if (assertion is Core.Assertions.Triangle triangle)
                 {
                     var newTriangle = new Core.Scene.Triangle(_sceneGraph, triangle.TriangleId) { VertexIds = triangle.VertexIds };
-                    renderTriangles.Value.Add(newTriangle);
+                    _partialObjectsWatchList.AddLast(newTriangle);
                     _sceneGraph.Triangles[triangle.TriangleId] = newTriangle;
                 }
                 else if (assertion is Core.Assertions.GrabScreenshot)
@@ -152,11 +154,28 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 }
             }
 
-            // TODO: Implement buffer streaming: https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
-            // TODO: Detect when triangle information is incomplete and place on "watch list"
-            if (renderTriangles.Value.Any())
+            // Get known complete geometry
+            var renderTriangles = new List<Core.Scene.Triangle>();
+            LinkedListNode<Core.Scene.Triangle> currentNode = _partialObjectsWatchList.First;
+            while (currentNode != null)
             {
-                yield return new RenderTriangleBuffer(_logger, _shaderCompiler, _textureLoader, _sceneGraph, renderTriangles.Value);
+                if (!currentNode.Value.HasMinimumRenderInfo)
+                {
+                    currentNode = currentNode.Next;
+                }
+                else
+                {
+                    renderTriangles.Add(currentNode.Value);
+                    var next = currentNode.Next;
+                    _partialObjectsWatchList.Remove(currentNode);
+                    currentNode = next;
+                }
+            }
+
+            // TODO: Implement buffer streaming: https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
+            if (renderTriangles.Any())
+            {
+                yield return new RenderTriangleBuffer(_logger, _shaderCompiler, _textureLoader, _sceneGraph, renderTriangles);
             }
         }
     }

@@ -82,6 +82,7 @@ These features are currently implemented:
 * Screenshots
 * Picking object at screen coordinate and returning its ID
 * Events (keyboard/mouse/picking/screenshot) and assertion loading logic
+* Support for partially specified object models in seperate batches
 
 # Licences
 

@@ -4,12 +4,6 @@
     {
         public Triangle(SceneGraph sceneGraph, ulong objectId) : base(sceneGraph, objectId)
         {
-            // TODO: Increase width of objectID in vertex buffer by splitting it across multiple floats
-            const ulong max = (2u << 23) - 1;
-            if (objectId > max)
-            {
-                throw new System.ArgumentException($"ObjectID too large, current limit is {max} imposed by IEEE 754");
-            }
         }
 
         public (ulong VertexId1, ulong VertexId2, ulong VertexId3) VertexIds { get; set; }
@@ -21,6 +15,19 @@
                 SceneGraph.Vertices[VertexIds.VertexId2],
                 SceneGraph.Vertices[VertexIds.VertexId3]
             );
+        }
+
+        /// <summary>
+        /// Returns true if triangle is ready to be sent to rendering system.
+        /// </summary>
+        public bool HasMinimumRenderInfo
+        {
+            get
+            {
+                return SceneGraph.Vertices.ContainsKey(VertexIds.VertexId1)
+                    && SceneGraph.Vertices.ContainsKey(VertexIds.VertexId2)
+                    && SceneGraph.Vertices.ContainsKey(VertexIds.VertexId3);
+            }
         }
     }
 }

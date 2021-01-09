@@ -31,6 +31,23 @@ namespace Trl_3D.SampleApp
             string image = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail.jpg";
             string image2 = $"{Uri.UriSchemeFile}://{currentLocation.Directory}/snail_2.jpg";
 
+            var batch0 = new AssertionBatch
+            {
+                Assertions = new IAssertion[]
+                {
+                    // Define vertices
+                    new Vertex(0, new Coordinate3d(-0.33f, 0.0f, 0.0f)),
+                    new Vertex(1, new Coordinate3d(0.33f, 0.0f, 0.0f)),
+                    new Vertex(2, new Coordinate3d(0.0f,  0.33f, 0.0f)),
+                    new Vertex(4, new Coordinate3d(0.66f, -0.33f, 0.0f)),
+                    new Vertex(5, new Coordinate3d(0.0f, -0.33f, 0.0f)),
+                    new Vertex(7, new Coordinate3d(-0.66f, -0.33f, 0.0f))
+                }
+            };
+
+            // Send the assertions to the rendering system
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch0, _cancellationTokenManager.CancellationToken);
+
             var batch1 = new AssertionBatch
             {
                 Assertions = new IAssertion[]
@@ -43,14 +60,6 @@ namespace Trl_3D.SampleApp
                     // Images
                     new Texture(100, image),
                     new Texture(200, image2),
-
-                    // Define vertices
-                    new Vertex(0, new Coordinate3d(-0.33f, 0.0f, 0.0f)),
-                    new Vertex(1, new Coordinate3d(0.33f, 0.0f, 0.0f)),
-                    new Vertex(2, new Coordinate3d(0.0f,  0.33f, 0.0f)),
-                    new Vertex(4, new Coordinate3d(0.66f, -0.33f, 0.0f)),
-                    new Vertex(5, new Coordinate3d(0.0f, -0.33f, 0.0f)),
-                    new Vertex(7, new Coordinate3d(-0.66f, -0.33f, 0.0f)),
 
                     // Top triangle
                     new Triangle(3, (0, 1, 2)),
