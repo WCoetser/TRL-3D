@@ -89,7 +89,11 @@ namespace Trl_3D.OpenTk.AssertionProcessor
 
             foreach (var assertion in assertionBatch.Assertions)
             {
-                if (assertion is Core.Assertions.ClearColor clearColor)
+                if (assertion is GetPickingInfo getPickingInfo)
+                {
+                    yield return new RenderCommands.RequestPickingInfo(getPickingInfo.ScreenX, getPickingInfo.ScreenY);
+                }
+                else if (assertion is Core.Assertions.ClearColor clearColor)
                 {
                     _sceneGraph.RgbClearColor = new (clearColor.Red, clearColor.Green, clearColor.Blue, 1.0f);
                     yield return new RenderCommands.ClearColor(_sceneGraph.RgbClearColor);

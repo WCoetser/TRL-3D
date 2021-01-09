@@ -28,7 +28,9 @@ namespace Trl_3D.SampleApp
 
         private CameraOrientation _currentCameraOrientation;
 
+        // 1 at a time
         bool screenshotEnqueued = false;
+        bool pickingInfoRequested = false;
 
         public EventProcessor(IRenderWindow renderWindow, 
                             ILogger<EventProcessor> logger, 
@@ -59,6 +61,10 @@ namespace Trl_3D.SampleApp
                     {
                         await ProcessUserEvent(userInputEvent);
                     }
+                    else if (currenEvent is PickingFeedback pickingFeedback)
+                    {
+                        ProcessPickingInfo(pickingFeedback);
+                    }
                     else
                     {
                         _logger.LogWarning($"Unknown event type {currenEvent.GetType().FullName}");
@@ -76,8 +82,26 @@ namespace Trl_3D.SampleApp
             _logger.LogInformation("EventProcessor stopped");
         }
 
+        private void ProcessPickingInfo(PickingFeedback pickingFeedback)
+        {
+            _logger.LogInformation(pickingFeedback.ToString());
+            pickingInfoRequested = false;
+        }
+
         private async Task ProcessUserEvent(UserInputStateEvent userInputEvent)
         {
+            if (userInputEvent.MouseState.IsButtonDown(MouseButton.Button1) && !pickingInfoRequested)
+            {
+                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(new AssertionBatch
+                {
+                    Assertions = new IAssertion[]
+                    {
+                        new GetPickingInfo((int)userInputEvent.MouseState.X, (int)userInputEvent.MouseState.Y)
+                    }
+                });
+                pickingInfoRequested = true;
+            }
+
             // Escape = quit
             if (userInputEvent.KeyboardState.WasKeyDown(Keys.Escape))
             {
@@ -170,6 +194,8 @@ namespace Trl_3D.SampleApp
             stopwatch.Stop();
 
             _logger.LogInformation($"Captured to {fileInfo.FullName} in {stopwatch.ElapsedMilliseconds} ms");
+
+            screenshotEnqueued = false;
         }
     }
 }

@@ -10,6 +10,9 @@ using OpenTK.Graphics.OpenGL4;
 using Trl_3D.OpenTk.Shaders;
 using Trl_3D.OpenTk.Textures;
 using Trl_3D.Core.Abstractions;
+using Trl_3D.OpenTk.RenderCommands;
+using System.Threading.Tasks;
+using Trl_3D.Core.Events;
 
 namespace Trl_3D.OpenTk
 {
@@ -29,6 +32,7 @@ namespace Trl_3D.OpenTk
         // Screen dimensions, frame rate etc.
         private readonly RenderInfo _renderInfo;
         private bool _windowSizeChanged;
+        private RequestPickingInfo _requestPicking;
 
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
         {
@@ -41,6 +45,7 @@ namespace Trl_3D.OpenTk
             _renderWindow = renderWindow; // This cannot be passed via the service provider otherwise there will be a cycle in the DI graph
             _renderList = new LinkedList<IRenderCommand>();
             _renderInfo = new RenderInfo();
+            _requestPicking = null;
         }
 
         internal void ResizeRenderWindow(int width, int height)
@@ -52,6 +57,11 @@ namespace Trl_3D.OpenTk
 
         public void UpdateState(IRenderCommand renderCommand)
         {
+            if (renderCommand is RequestPickingInfo requestPicking)
+            {
+                _requestPicking = requestPicking;
+            }
+
             renderCommand.SetState(_renderInfo);
 
             var err = GL.GetError();
@@ -108,9 +118,50 @@ namespace Trl_3D.OpenTk
                 return;
             }
 
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            // Render content for picking
+            LinkedListNode<IRenderCommand> currentNode = null;            
+            if (_requestPicking != null)
+            {
+                GL.Clear(ClearBufferMask.DepthBufferBit);
 
-            var currentNode = _renderList.First;
+                currentNode = _renderList.First;
+                PickingInfo currentPickingInfo = null;
+                while (currentNode != null)
+                {
+                    var command = currentNode.Value;
+                    var pickingInfo = command.RenderForPicking(_renderInfo, _requestPicking.ScreenX, _requestPicking.ScreenY);
+                    if (pickingInfo != null)
+                    {
+                        currentPickingInfo = pickingInfo;
+                    }
+                    var next = currentNode.Next;
+                    if (command.SelfDestruct)
+                    {
+                        _renderList.Remove(currentNode);
+                        if (command is IDisposable disposable)
+                        {
+                            disposable.Dispose();
+                        }
+                    }
+                    currentNode = next;
+                }
+                _requestPicking = null;
+
+                if (currentPickingInfo != null)
+                {
+                    var writeTask = Task.Run(async () =>
+                    {
+                        await _renderWindow.EventChannel.Writer.WriteAsync(new PickingFeedback(currentPickingInfo),
+                            _cancellationTokenManager.CancellationToken);
+                    });
+                    writeTask.Wait();
+                }
+            }
+
+            // Render content for display
+            GL.Clear(ClearBufferMask.DepthBufferBit);
+
+            currentNode = _renderList.First;
             while (currentNode != null)
             {
                 var command = currentNode.Value;

@@ -40,5 +40,10 @@ namespace Trl_3D.OpenTk.RenderCommands
         {
             // nothiong to do here
         }
+
+        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
+        {
+            return null;
+        }
     }
 }

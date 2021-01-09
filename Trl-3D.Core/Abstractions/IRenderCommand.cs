@@ -21,6 +21,11 @@
         /// Shows state from <see cref="SetState"/>
         /// </summary>
         /// <param name="renderInfo"></param>
-        void Render(RenderInfo renderInfo);        
+        void Render(RenderInfo renderInfo);
+
+        /// <summary>
+        /// Renders this buffer and tests what is located at a specific pixel.
+        /// </summary>
+        PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY);
     }
 }

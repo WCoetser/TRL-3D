@@ -12,13 +12,14 @@ using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
 using System.IO;
+using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
 {
     /// <summary>
     /// Builds and manages memory for triangle vertex buffers
     /// </summary>
-    public class TriangleBuffer : IDisposable
+    public class TriangleBuffer : IDisposable, IGeometryBuffer
     {
         private readonly ILogger _logger;
         private readonly IShaderCompiler _shaderCompiler;
@@ -210,11 +211,17 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
         public void Render(RenderInfo info)
         {
+            Render(info, false);
+        }
+
+        public void Render(RenderInfo info, bool isInPickingMode)
+        {
             _shaderProgram.UseProgram();
 
             // Set camera location and projection
             _shaderProgram.SetUniform("viewMatrix", _sceneGraph.ViewMatrix);
             _shaderProgram.SetUniform("projectionMatrix", _sceneGraph.ProjectionMatrix);
+            _shaderProgram.SetUniform("isInPickingMode", isInPickingMode);
 
             // TODO: Remove ToArray()
             GL.BindTextures(0, _renderTextures.Count, _renderTextures.Select(tex => tex.OpenGLTextureId).ToArray());
@@ -249,6 +256,38 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             using var inputStream = GetType().Assembly.GetManifestResourceStream("Trl_3D.OpenTk.GeometryBuffers.triangle_buffer_shader.vert");
             using var reader = new StreamReader(inputStream);
             return reader.ReadToEnd();            
+        }
+
+        /// <summary>
+        /// Must be called in render loop.
+        /// </summary>
+        public PickingInfo RenderForPicking(RenderInfo info, int screenX, int screenY)
+        {
+            // Render with picking mode so that surface IDs are generated as colours
+            Render(info, true);
+
+            // Get surface ID
+            byte[] backBufferDump = new byte[4];
+            GL.ReadBuffer(ReadBufferMode.Back);
+            int screenYInverted = info.Height - screenY - 1;
+            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, backBufferDump);
+
+            // TODO: Get depth buffer value to un-project back to world coordinates, requires reading depth buffer
+            //float[] zValue = new float[1];
+            //GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
+
+            // In this case nothing has been hit and we are looking at the clear colour
+            if (backBufferDump[0] == 0
+                && backBufferDump[1] == 0
+                && backBufferDump[2] == 0
+                && backBufferDump[3] == 0)
+            {
+                return new PickingInfo(null, info.TotalRenderTime, screenX, screenY); ;
+            }
+
+            ulong surfaceIdOut = ((ulong)backBufferDump[0] * 256 * 256) + ((ulong)backBufferDump[1] * 256) + (ulong)backBufferDump[2];
+
+            return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY);
         }
     }
 }

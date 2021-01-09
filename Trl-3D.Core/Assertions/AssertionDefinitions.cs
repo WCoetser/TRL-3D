@@ -41,4 +41,9 @@ namespace Trl_3D.Core.Assertions
     /// Configures the projection matrix.
     /// </summary>
     public record CameraProjectionPerspective(float FieldOfViewVerticalDegrees, float NearPlane, float FarPlane) : IAssertion;
+
+    /// <summary>
+    /// Gets information about an object rendered at the given coordinates.
+    /// </summary>
+    public record GetPickingInfo(int ScreenX, int ScreenY) : IAssertion;
 }
