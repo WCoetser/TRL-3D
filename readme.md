@@ -74,6 +74,15 @@ public static void ConfigureServices(IServiceCollection services)
 ```
 The shortest path to an implementation is to use the sample app as boilerplate.
 
+These features are currently implemented:
+
+* Geometry: Triangles
+* Multiple textures
+* Perspective projection, moving the camera
+* Screenshots
+* Picking object at screen coordinate and returning its ID
+* Events (keyboard/mouse/picking/screenshot) and assertion loading logic
+
 # Licences
 
 This project is released under the MIT license, see [licence.txt](license.txt).
