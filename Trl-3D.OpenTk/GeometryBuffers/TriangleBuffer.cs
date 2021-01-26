@@ -12,7 +12,6 @@ using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
 using System.IO;
-using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
 {
@@ -33,14 +32,18 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         private int _vertexIndexBufferId;
 
         // Local state
-        private float[] _vertexBuffer;
-        private int _triangleCount;
-        private uint[] _vertexIndexBuffer;
-        
+        private Lazy<float[]> _vertexBuffer;
+        private Lazy<uint[]> _vertexIndexBuffer;
+        private EqualityComparerMapper<ulong> _textureObjectIdToShaderIndex;
         private List<Core.Scene.Texture> _activeTextures;
         private List<Textures.Texture> _renderTextures;
 
         private ShaderProgram _shaderProgram;
+
+        const int ComponentsPerVertex = 12; // number of floats per vertex
+        const int VerticesPerTriangle = 3;
+
+        private readonly Core.Scene.Triangle[] _triangleAssertionsToRender;
 
         /// <summary>
         /// Builds a buffer based on the given triangles for the given scene graph
@@ -58,26 +61,30 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             _textureLoader = textureLoader;
             _sceneGraph = sceneGraph;
 
-            BuildBuffer(triangleAssertionsToRender);
+            _triangleAssertionsToRender = triangleAssertionsToRender.ToArray();
+
+            _vertexBuffer = new Lazy<float[]>(() => new float[_triangleAssertionsToRender.Length * VerticesPerTriangle * ComponentsPerVertex]);
+            _vertexIndexBuffer = new Lazy<uint[]>(() => new uint[_triangleAssertionsToRender.Length * VerticesPerTriangle]);
+
+            _textureObjectIdToShaderIndex = new EqualityComparerMapper<ulong>(EqualityComparer<ulong>.Default);
+
+            BuildBuffer();
         }
 
-        private void BuildBuffer(IEnumerable<Core.Scene.Triangle> triangleAssertionsToRender)
+        private void BuildBuffer()
         {
-            // This dictionary keeps track of existing mapped textures in order to re-use them where appropriate
-            var textureObjectIdToShaderIndex = new EqualityComparerMapper<ulong>(EqualityComparer<ulong>.Default);
-
             _activeTextures = new List<Core.Scene.Texture>();
 
-            var vertexIndexBufferWriter = new ArrayBufferWriter<uint>();
-            var vertexBufferWriter = new ArrayBufferWriter<float>();
+            int vertexIndex = 0;
+            int triangleIndex = 0;
 
-            var vertexIndex = 0u;
+            _textureObjectIdToShaderIndex.Clear();
 
-            foreach (var triangle in triangleAssertionsToRender)
+            foreach (var triangle in _triangleAssertionsToRender)
             {
                 var vertices = triangle.GetVertices();
 
-                uint loadVertexPosition(Core.Scene.Vertex v)
+                int loadVertexPosition(Core.Scene.Vertex v)
                 {
                     _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
                     _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
@@ -88,125 +95,128 @@ namespace Trl_3D.OpenTk.GeometryBuffers
                     {
                         var textureId = texCoords.TextureId;
                         if (_sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture)
-                            && !textureObjectIdToShaderIndex.TryGetMappedValue(texture.ObjectId, out textureSamplerIndex))
+                            && !_textureObjectIdToShaderIndex.TryGetMappedValue(texture.ObjectId, out textureSamplerIndex))
                         {
                             _activeTextures.Add(texture);
-                            textureSamplerIndex = textureObjectIdToShaderIndex.Map(texture.ObjectId);
+                            textureSamplerIndex = _textureObjectIdToShaderIndex.Map(texture.ObjectId);
                         }
                     }
 
-                    var vertexComponents = new ReadOnlySpan<float>(new float[]
-                    {
-                        // Object IDs
-                        v.ObjectId,
-                        triangle.ObjectId,
-                        // Coordinates
-                        v.Coordinates.X,
-                        v.Coordinates.Y,
-                        v.Coordinates.Z,
-                        // Colour
-                        vertexColor?.Red ?? 1.0f,
-                        vertexColor?.Green ?? 1.0f,
-                        vertexColor?.Blue ?? 1.0f,
-                        vertexColor?.Opacity ?? 1.0f,
-                        // Texture coords
-                        texCoords == default ? 0.0f : texCoords.U,
-                        texCoords == default ? 0.0f : texCoords.V,
-                        // Texture sampler index
-                        textureSamplerIndex.HasValue ? (textureSamplerIndex.Value - MapConstants.FirstMappableInteger) : -1.0f
-                    });
-                    vertexBufferWriter.Write(vertexComponents);
+                    var spanOutVertexData = new Span<float>(_vertexBuffer.Value, vertexIndex * ComponentsPerVertex, ComponentsPerVertex);
+                    // Object Ids
+                    spanOutVertexData[0] = v.ObjectId;
+                    spanOutVertexData[1] = triangle.ObjectId;
+                    // Coordinates
+                    spanOutVertexData[2] = v.Coordinates.X;
+                    spanOutVertexData[3] = v.Coordinates.Y;
+                    spanOutVertexData[4] = v.Coordinates.Z;
+                    // Colour
+                    spanOutVertexData[5] = vertexColor?.Red ?? 1.0f;
+                    spanOutVertexData[6] = vertexColor?.Green ?? 1.0f;
+                    spanOutVertexData[7] = vertexColor?.Blue ?? 1.0f;
+                    spanOutVertexData[8] = vertexColor?.Opacity ?? 1.0f;
+                    // Texture coords
+                    spanOutVertexData[9] = texCoords == default ? 0.0f : texCoords.U;
+                    spanOutVertexData[10] = texCoords == default ? 0.0f : texCoords.V;
+                    // Texture sampler index
+                    spanOutVertexData[11] = textureSamplerIndex.HasValue ? (textureSamplerIndex.Value - MapConstants.FirstMappableInteger) : -1.0f;
 
                     vertexIndex++;
                     return vertexIndex - 1;
                 };
 
-                var indices = new ReadOnlySpan<uint>(new uint[]
-                {
-                    loadVertexPosition(vertices.Item1),
-                    loadVertexPosition(vertices.Item2),
-                    loadVertexPosition(vertices.Item3)
-                });
-                vertexIndexBufferWriter.Write(indices);
+                var spanOutIndexData = new Span<uint>(_vertexIndexBuffer.Value, triangleIndex * VerticesPerTriangle, VerticesPerTriangle);
+                spanOutIndexData[0] = (uint)loadVertexPosition(vertices.Item1);
+                spanOutIndexData[1] = (uint)loadVertexPosition(vertices.Item2);
+                spanOutIndexData[2] = (uint)loadVertexPosition(vertices.Item3);
 
-                _triangleCount++;
+                triangleIndex++;
             }
-
-            _vertexBuffer = vertexBufferWriter.WrittenMemory.ToArray();
-            _vertexIndexBuffer = vertexIndexBufferWriter.WrittenMemory.ToArray();
         }
 
-        public void SetState()        
+        public void SetState(bool isReload)
         {
+            if (!isReload)
+            {
+                _maxFragmentShaderTextureUnits = GL.GetInteger(GetPName.MaxTextureImageUnits);
+                _shaderProgram = _shaderCompiler.Compile(GetVertexShaderCode(), GetFragmentShaderCode());
+            }
+
+            if (_activeTextures.Count > _maxFragmentShaderTextureUnits)
+            {
+                _logger.LogInformation($"Maximum number of fragment shader texture image units = {_maxFragmentShaderTextureUnits}");
+                _logger.LogError("Maximum number of active textures exceeded.");
+                return;
+            }
+
             _renderTextures = new List<Textures.Texture>();
             foreach (var texture in _activeTextures)
             {
                 _renderTextures.Add(_textureLoader.LoadTexture(texture));
             }
 
-            _maxFragmentShaderTextureUnits = GL.GetInteger(GetPName.MaxTextureImageUnits);
-            _shaderProgram = _shaderCompiler.Compile(GetVertexShaderCode(), GetFragmentShaderCode());
-            _logger.LogInformation($"Maximum number of fragment shader texture image units = {_maxFragmentShaderTextureUnits}");
-            if (_activeTextures.Count > _maxFragmentShaderTextureUnits)
+            if (isReload)
             {
-                _logger.LogError("Maximum number of active textures exceeded.");
-                return;
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
+                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, _vertexBuffer.Value.Length * sizeof(float), _vertexBuffer.Value);
             }
+            else
+            {                
+                var stride = ComponentsPerVertex * sizeof(float);
 
-            const int componentsPerVertex = 12; // number of floats per vertex
-            var stride = componentsPerVertex * sizeof(float);
+                var vertexArrays = new int[1];
+                GL.CreateVertexArrays(1, vertexArrays);
+                GL.BindVertexArray(vertexArrays[0]);
+                _vertexArrayObject = vertexArrays[0];
 
-            var vertexArrays = new int[1];
-            GL.CreateVertexArrays(1, vertexArrays);
-            GL.BindVertexArray(vertexArrays[0]);
-            _vertexArrayObject = vertexArrays[0];
+                var buffers = new int[1];
+                GL.CreateBuffers(1, buffers);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, buffers[0]);
+                GL.BufferData(BufferTarget.ArrayBuffer, _vertexBuffer.Value.Length * sizeof(float), _vertexBuffer.Value, BufferUsageHint.DynamicCopy);
+                _vertexBufferObject = buffers[0];
 
-            var buffers = new int[1];
-            GL.CreateBuffers(1, buffers);
-            GL.BindBuffer(BufferTarget.ArrayBuffer, buffers[0]);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertexBuffer.Length * sizeof(float), _vertexBuffer, BufferUsageHint.StaticCopy);
-            _vertexBufferObject = buffers[0];
 
-            // Vertex ID
-            const int layout_pos_vertexId = 0;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexId);
-            GL.VertexAttribPointer(layout_pos_vertexId, 3, VertexAttribPointerType.Float, false, stride, 0);
+                // Vertex ID
+                const int layout_pos_vertexId = 0;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexId);
+                GL.VertexAttribPointer(layout_pos_vertexId, 3, VertexAttribPointerType.Float, false, stride, 0);
 
-            // Surface ID
-            const int layout_pos_surfaceId = 1;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_surfaceId);
-            GL.VertexAttribPointer(layout_pos_surfaceId, 3, VertexAttribPointerType.Float, false, stride, sizeof(float));
+                // Surface ID
+                const int layout_pos_surfaceId = 1;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_surfaceId);
+                GL.VertexAttribPointer(layout_pos_surfaceId, 3, VertexAttribPointerType.Float, false, stride, sizeof(float));
 
-            // Vertex position
-            const int layout_pos_vertexPosition = 2;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexPosition);
-            GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2 * sizeof(float));
+                // Vertex position
+                const int layout_pos_vertexPosition = 2;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexPosition);
+                GL.VertexAttribPointer(layout_pos_vertexPosition, 3, VertexAttribPointerType.Float, false, stride, 2 * sizeof(float));
 
-            // Vertex colour
-            const int layout_pos_vertexColor = 3;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexColor);
-            GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
+                // Vertex colour
+                const int layout_pos_vertexColor = 3;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexColor);
+                GL.VertexAttribPointer(layout_pos_vertexColor, 4, VertexAttribPointerType.Float, false, stride, 5 * sizeof(float));
 
-            // Texture coordinates
-            const int layout_tex_coords = 4;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_tex_coords);
-            GL.VertexAttribPointer(layout_tex_coords, 2, VertexAttribPointerType.Float, false, stride, 9 * sizeof(float));
+                // Texture coordinates
+                const int layout_tex_coords = 4;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_tex_coords);
+                GL.VertexAttribPointer(layout_tex_coords, 2, VertexAttribPointerType.Float, false, stride, 9 * sizeof(float));
 
-            // Sampler index
-            const int layout_sampler_index = 5;
-            GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_sampler_index);
-            GL.VertexAttribPointer(layout_sampler_index, 1, VertexAttribPointerType.Float, false, stride, 11 * sizeof(float));
+                // Sampler index
+                const int layout_sampler_index = 5;
+                GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_sampler_index);
+                GL.VertexAttribPointer(layout_sampler_index, 1, VertexAttribPointerType.Float, false, stride, 11 * sizeof(float));
 
-            // Vertex index buffer for triangles
-            var indexBuffers = new int[1];
-            GL.CreateBuffers(1, indexBuffers);
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffers[0]);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer.Length * sizeof(uint), _vertexIndexBuffer, BufferUsageHint.StaticDraw);
-            _vertexIndexBufferId = indexBuffers[0];
+                // Create vertex index buffer for drawing triangles
+                var indexBuffers = new int[1];
+                GL.CreateBuffers(1, indexBuffers);
+                GL.BindBuffer(BufferTarget.ElementArrayBuffer, indexBuffers[0]);
+                GL.BufferData(BufferTarget.ElementArrayBuffer, _vertexIndexBuffer.Value.Length * sizeof(uint), _vertexIndexBuffer.Value, BufferUsageHint.DynamicDraw);
+                _vertexIndexBufferId = indexBuffers[0];
 
-            // Log stats
-            _logger.LogInformation($"Vertex buffer size = {_vertexBuffer.Length * sizeof(float)} bytes");
-            _logger.LogInformation($"Vertex index buffer size = {_vertexIndexBuffer.Length * sizeof(uint)} bytes");
+                // Log stats
+                _logger.LogInformation($"Vertex buffer size = {_vertexBuffer.Value.Length * sizeof(float)} bytes");
+                _logger.LogInformation($"Vertex index buffer size = {_vertexIndexBuffer.Value.Length * sizeof(uint)} bytes");
+            }
         }
 
         public void Render(RenderInfo info)
@@ -232,7 +242,7 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
             GL.BindVertexArray(_vertexArrayObject);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _vertexIndexBufferId);
-            GL.DrawElements(PrimitiveType.Triangles, _triangleCount * 3, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(PrimitiveType.Triangles, _triangleAssertionsToRender.Length * VerticesPerTriangle, DrawElementsType.UnsignedInt, 0);
         }
 
         public void Dispose()
@@ -272,7 +282,7 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             int screenYInverted = info.Height - screenY - 1;
             GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, backBufferDump);
 
-            // TODO: Get depth buffer value to un-project back to world coordinates, requires reading depth buffer
+            // TODO: Get depth buffer value to un-project back to world coordinates, requires reading depth buffer ... not available in OpenGL 4.5?
             //float[] zValue = new float[1];
             //GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
 
@@ -288,6 +298,12 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             ulong surfaceIdOut = ((ulong)backBufferDump[0] * 256 * 256) + ((ulong)backBufferDump[1] * 256) + (ulong)backBufferDump[2];
 
             return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY);
+        }
+
+        public void Reload()
+        {
+            BuildBuffer();
+            SetState(true);
         }
     }
 }

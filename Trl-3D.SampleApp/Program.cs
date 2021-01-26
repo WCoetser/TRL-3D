@@ -45,6 +45,10 @@ namespace Trl_3D.SampleApp
                 var eventProcessor = serviceProvider.GetRequiredService<IEventProcessor>();
                 var eventProcessorTask = Task.Run(async () => await eventProcessor.StartEventProcessor());
 
+                // Start animation thread for non-user inputs
+                var animations = serviceProvider.GetRequiredService<Animation>();
+                var animationsTask = Task.Run(async () => await animations.Start());
+
                 // Main UI thread
                 var renderWindow = serviceProvider.GetRequiredService<IRenderWindow>();
                 renderWindow.Run();
@@ -56,7 +60,7 @@ namespace Trl_3D.SampleApp
                 // ---
                 // NB: This is expected to generate OperationCanceledException
                 // ---
-                await Task.WhenAll(sceneProducerTask, sceneConsumerTask, eventProcessorTask);
+                await Task.WhenAll(sceneProducerTask, sceneConsumerTask, eventProcessorTask, animationsTask);
             }
             catch (OperationCanceledException e) 
                 when (e.CancellationToken == cancellationTokenManager.CancellationToken
@@ -125,6 +129,10 @@ namespace Trl_3D.SampleApp
             services.AddSingleton<IAssertionLoader, SceneLoader>();
             services.AddSingleton<IEventProcessor, EventProcessor>();
             services.AddSingleton<IImageLoader, ImageLoader>();
+
+            // Test class using the rest of the dependencies to do animations
+            // on a seperate thread
+            services.AddSingleton<Animation>();
         }
     }
 }

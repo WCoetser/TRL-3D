@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Scene;
+using Trl_3D.OpenTk.GeometryBuffers;
 using Trl_3D.OpenTk.RenderCommands;
-using Trl_3D.OpenTk.Shaders;
-using Trl_3D.OpenTk.Textures;
 
 namespace Trl_3D.OpenTk.AssertionProcessor
 {
@@ -21,10 +20,10 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         private readonly ICancellationTokenManager _cancellationTokenManager;
         private readonly IImageLoader _imageLoader;
         private readonly SceneGraph _sceneGraph;
-        private readonly IShaderCompiler _shaderCompiler;
-        private readonly ITextureLoader _textureLoader;
 
         private readonly LinkedList<Core.Scene.Triangle> _partialObjectsWatchList; // keep track of partial objects that may become complete in a future batch
+
+        private readonly BufferManager _bufferManager;
 
         public Channel<AssertionBatch> AssertionUpdatesChannel { get; private set; }
 
@@ -33,8 +32,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                                   IRenderWindow renderWindow,
                                   ICancellationTokenManager cancellationTokenManager,
                                   SceneGraph sceneGraph,
-                                  IShaderCompiler shaderCompiler, 
-                                  ITextureLoader textureLoader)
+                                  BufferManager bufferManager)
         {
             _logger = logger;
             _renderWindow = renderWindow;
@@ -42,12 +40,12 @@ namespace Trl_3D.OpenTk.AssertionProcessor
             _logger.LogInformation("Scene created.");
             _imageLoader = imageLoader;
             _sceneGraph = sceneGraph;
-            _shaderCompiler = shaderCompiler;
-            _textureLoader = textureLoader;
 
             AssertionUpdatesChannel = Channel.CreateUnbounded<AssertionBatch>();
 
             _partialObjectsWatchList = new LinkedList<Core.Scene.Triangle>();
+
+            _bufferManager = bufferManager;
         }
 
         public async Task StartAssertionConsumer()
@@ -172,11 +170,16 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 }
             }
 
-            // TODO: Implement buffer streaming: https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming
             if (renderTriangles.Any())
             {
-                yield return new RenderTriangleBuffer(_logger, _shaderCompiler, _textureLoader, _sceneGraph, renderTriangles);
+                yield return _bufferManager.CreateRenderCommands(renderTriangles);                
             }
+
+            //// Test 
+            foreach (var reloadCommand in _bufferManager.CreateReloadCommands())
+            {
+                yield return reloadCommand;
+            }            
         }
     }
 }

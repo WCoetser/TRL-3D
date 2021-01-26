@@ -1,12 +1,5 @@
-﻿
-using Microsoft.Extensions.Logging;
-
-using Trl_3D.Core.Abstractions;
-using Trl_3D.Core.Scene;
-using Trl_3D.OpenTk.Textures;
-using Trl_3D.OpenTk.Shaders;
+﻿using Trl_3D.Core.Abstractions;
 using Trl_3D.OpenTk.GeometryBuffers;
-using System.Collections.Generic;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
@@ -18,11 +11,9 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         private readonly TriangleBuffer _triangleBuffer;
 
-        public RenderTriangleBuffer(ILogger logger, IShaderCompiler shaderCompiler, 
-            ITextureLoader textureLoader, SceneGraph sceneGraph,
-            IEnumerable<Triangle> triangles)
+        internal RenderTriangleBuffer(TriangleBuffer triangleBuffer)
         {
-            _triangleBuffer = new TriangleBuffer(sceneGraph, triangles, logger, shaderCompiler, textureLoader);
+            _triangleBuffer = triangleBuffer;
         }
 
         public void Render(RenderInfo renderInfo)
@@ -32,7 +23,7 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         public void SetState(RenderInfo renderInfo)
         {
-            _triangleBuffer.SetState();
+            _triangleBuffer.SetState(false);
         }
 
         public void Dispose()

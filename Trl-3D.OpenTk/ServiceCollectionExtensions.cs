@@ -16,6 +16,7 @@ namespace Trl_3D.OpenTk
             serviceCollection.AddSingleton<IShaderCompiler, ShaderCompiler>();
             serviceCollection.AddSingleton<ITextureLoader, TextureLoader>();
             serviceCollection.AddSingleton<IAssertionProcessor, AssertionProcessor.AssertionProcessor>();
+            serviceCollection.AddSingleton<GeometryBuffers.BufferManager>();
         }
     }
 }
