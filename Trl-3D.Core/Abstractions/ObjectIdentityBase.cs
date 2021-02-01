@@ -1,25 +1,31 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Trl_3D.Core.Abstractions
 {
-    public abstract class ObjectIdentityBase : IObjectIdentity
+    public abstract class ObjectIdentityBase : IEqualityComparer<ObjectIdentityBase>
     {
-        public ulong ObjectId { get; }
+        /// <summary>
+        /// Compound primary key.
+        /// </summary>
+        protected IReadOnlyList<ulong> ObjectIds { get; }
 
-        protected ObjectIdentityBase(ulong objectId)
+        protected ObjectIdentityBase(params ulong[] objectIds)
         {
-            ObjectId = objectId;
+            ObjectIds = objectIds;
             // TODO: Increase width of objectID in vertex buffer by splitting it across multiple floats
             const ulong max = (2u << 23) - 1;
-            if (objectId > max)
+            if (ObjectIds.Any(objectId => objectId > max))
             {
-                throw new System.ArgumentException($"ObjectID too large, current limit is {max} imposed by IEEE 754");
+                throw new ArgumentException($"ObjectID too large, current limit is {max} imposed by IEEE 754");
             }
         }
 
         public override int GetHashCode() => GetHashCode(this);
 
-        public override bool Equals(object obj) => obj is IObjectIdentity idObj && Equals(this, idObj);
+        public override bool Equals(object obj) => obj is ObjectIdentityBase idObj && Equals(this, idObj);
 
         public static bool operator ==(ObjectIdentityBase lhs, ObjectIdentityBase rhs)
         {
@@ -28,14 +34,14 @@ namespace Trl_3D.Core.Abstractions
                 (null, null) => true,
                 (_, null) => false,
                 (null, _) => false,
-                _ => lhs.ObjectId == rhs.ObjectId
+                _ => (lhs.ObjectIds, lhs.GetType()) == (rhs.ObjectIds, rhs.GetType()) && Enumerable.SequenceEqual(lhs.ObjectIds, rhs.ObjectIds)
             };
         }
 
         public static bool operator !=(ObjectIdentityBase lhs, ObjectIdentityBase rhs) => !(lhs == rhs);
 
-        public bool Equals(IObjectIdentity x, IObjectIdentity y) => x == y;
+        public bool Equals(ObjectIdentityBase x, ObjectIdentityBase y) => x == y;
 
-        public int GetHashCode([DisallowNull] IObjectIdentity obj) => obj.ObjectId.GetHashCode();
+        public int GetHashCode([DisallowNull] ObjectIdentityBase obj) => HashCode.Combine(obj.ObjectIds.GetHashCode(), obj.GetType());
     }
 }

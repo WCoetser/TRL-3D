@@ -1,4 +1,6 @@
-﻿namespace Trl_3D.Core.Scene
+﻿using System.Linq;
+
+namespace Trl_3D.Core.Scene
 {
     public class Triangle : SceneGraphObjectBase
     {
@@ -29,5 +31,8 @@
                     && SceneGraph.Vertices.ContainsKey(VertexIds.VertexId3);
             }
         }
+
+        public ulong TriangleId => ObjectIds.Single();
+
     }
 }

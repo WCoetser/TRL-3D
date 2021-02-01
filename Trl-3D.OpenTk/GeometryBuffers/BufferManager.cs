@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Scene;
 using Trl_3D.OpenTk.RenderCommands;
 using Trl_3D.OpenTk.Shaders;
@@ -16,8 +17,8 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
 
-        // TODO ... Dispose & reference count
-        private readonly List<TriangleBuffer> _triangleBuffers;
+        // This is used to work out of a new buffer should be created for an object, or whether an existing buffer should be updated.
+        private Dictionary<ObjectIdentityBase, HashSet<ObjectIdentityBase>> _objectToGeometryBuffers;
 
         public BufferManager(SceneGraph sceneGraph, ILogger<BufferManager> logger, IShaderCompiler shaderCompiler, ITextureLoader textureLoader)
         {
@@ -26,19 +27,42 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             _shaderCompiler = shaderCompiler;
             _textureLoader = textureLoader;
 
-            _triangleBuffers = new List<TriangleBuffer>();
+            _objectToGeometryBuffers = new Dictionary<ObjectIdentityBase, HashSet<ObjectIdentityBase>>();
+        }
+
+        internal void AddAssociation(ObjectIdentityBase sceneGraphObject, ObjectIdentityBase geometryBuffer)
+        {
+            if (geometryBuffer is not IGeometryBuffer)
+            {
+                throw new ArgumentException($"{nameof(geometryBuffer)} should be {nameof(IGeometryBuffer)}");
+            }
+
+            if (!_objectToGeometryBuffers.TryGetValue(sceneGraphObject, out var bufferCollection))
+            {
+                bufferCollection = new HashSet<ObjectIdentityBase>();
+                _objectToGeometryBuffers[sceneGraphObject] = bufferCollection;
+            }
+            bufferCollection.Add(geometryBuffer);
         }
 
         internal RenderTriangleBuffer CreateRenderCommands(IEnumerable<Triangle> triangles)
         {
-            var newBuffer = new TriangleBuffer(_sceneGraph, triangles, _logger, _shaderCompiler, _textureLoader);
-            _triangleBuffers.Add(newBuffer);
+            var newBuffer = new TriangleBuffer(_sceneGraph, this, triangles, _logger, _shaderCompiler, _textureLoader);
             return new RenderTriangleBuffer(newBuffer);
         }        
 
-        internal IEnumerable<ReloadTriangleBuffer> CreateReloadCommands()
+        internal IEnumerable<ReloadTriangleBuffer> CreateReloadCommands(List<ObjectIdentityBase> knownUpdateObjects)
         {
-            return _triangleBuffers.Select(tb => new ReloadTriangleBuffer(tb));
+            // At this point everything is a triangle buffer
+            var returnBuffers = new HashSet<TriangleBuffer>();
+            var updateObjectRelations = knownUpdateObjects.Where(obj => _objectToGeometryBuffers.ContainsKey(obj)).Select(obj => _objectToGeometryBuffers[obj]);
+            foreach (var bufferCollection in updateObjectRelations)
+            {
+                returnBuffers.UnionWith(bufferCollection.Cast<TriangleBuffer>());
+            }
+            return returnBuffers.Select(tb => new ReloadTriangleBuffer(tb));
         }
+
+        internal bool HasExistingTriangleBuffer(Triangle value) => _objectToGeometryBuffers.ContainsKey(value);
     }
 }

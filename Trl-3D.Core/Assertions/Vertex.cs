@@ -2,16 +2,16 @@
 
 namespace Trl_3D.Core.Assertions
 {
-    public class Vertex : IAssertion
+    public class Vertex : ObjectIdentityBase, IAssertion
     {
-        public ulong VertexId { get; }
-        public ColorRgba Color { get; }
+        public SurfaceColor Color { get; }
         public Coordinate3d Coordinates { get; }
 
-        public Vertex(ulong vertexId, Coordinate3d coordinates)
+        public Vertex(ulong vertexId, Coordinate3d coordinates) : base(vertexId)
         {
-            VertexId = vertexId;
             Coordinates = coordinates;
         }
+
+        public ulong VertexId => ObjectIds[0];
     }
 }

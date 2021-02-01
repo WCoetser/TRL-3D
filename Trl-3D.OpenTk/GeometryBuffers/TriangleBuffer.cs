@@ -18,12 +18,13 @@ namespace Trl_3D.OpenTk.GeometryBuffers
     /// <summary>
     /// Builds and manages memory for triangle vertex buffers
     /// </summary>
-    public class TriangleBuffer : IDisposable, IGeometryBuffer
+    public class TriangleBuffer : InstanceCounterBase, IDisposable, IGeometryBuffer
     {
         private readonly ILogger _logger;
         private readonly IShaderCompiler _shaderCompiler;
         private readonly ITextureLoader _textureLoader;
-        private readonly SceneGraph _sceneGraph;        
+        private readonly SceneGraph _sceneGraph;
+        private readonly BufferManager _bufferManager;
 
         // OpenGL object IDs
         private int _vertexArrayObject;
@@ -51,15 +52,17 @@ namespace Trl_3D.OpenTk.GeometryBuffers
         /// <param name="sceneGraph">The scene graph for the entire world model.</param>
         /// <param name="triangleAssertionsToRender">The triangles for which a buffer needs to be constructed.</param>
         public TriangleBuffer(SceneGraph sceneGraph, 
+                              BufferManager bufferManager,
                               IEnumerable<Core.Scene.Triangle> triangleAssertionsToRender,
                               ILogger logger, 
                               IShaderCompiler shaderCompiler, 
-                              ITextureLoader textureLoader)
+                              ITextureLoader textureLoader) : base()
         {
             _logger = logger;
             _shaderCompiler = shaderCompiler;
             _textureLoader = textureLoader;
             _sceneGraph = sceneGraph;
+            _bufferManager = bufferManager;
 
             _triangleAssertionsToRender = triangleAssertionsToRender.ToArray();
 
@@ -82,39 +85,52 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
             foreach (var triangle in _triangleAssertionsToRender)
             {
+                _bufferManager.AddAssociation(triangle, this);
+
                 var vertices = triangle.GetVertices();
 
                 int loadVertexPosition(Core.Scene.Vertex v)
                 {
-                    _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.ObjectId, v.ObjectId), out TexCoords texCoords);
-                    _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.ObjectId, v.ObjectId), out ColorRgba vertexColor);
+                    _bufferManager.AddAssociation(v, this);
+
+                    _sceneGraph.SurfaceVertexTexCoords.TryGetValue((triangle.TriangleId, v.VertexId), out TexCoords texCoords);
+                    _sceneGraph.SurfaceVertexColors.TryGetValue((triangle.TriangleId, v.VertexId), out SurfaceColor vertexColor);
 
                     ulong? textureSamplerIndex = null;
 
                     if (texCoords != default)
                     {
+                        _bufferManager.AddAssociation(texCoords, this);
+
                         var textureId = texCoords.TextureId;
                         if (_sceneGraph.Textures.TryGetValue(textureId, out Core.Scene.Texture texture)
-                            && !_textureObjectIdToShaderIndex.TryGetMappedValue(texture.ObjectId, out textureSamplerIndex))
+                            && !_textureObjectIdToShaderIndex.TryGetMappedValue(texture.TextureId, out textureSamplerIndex))
                         {
+                            _bufferManager.AddAssociation(texture, this);
+
                             _activeTextures.Add(texture);
-                            textureSamplerIndex = _textureObjectIdToShaderIndex.Map(texture.ObjectId);
+                            textureSamplerIndex = _textureObjectIdToShaderIndex.Map(texture.TextureId);
                         }
+                    }
+
+                    if (vertexColor != default)
+                    {
+                        _bufferManager.AddAssociation(vertexColor, this);
                     }
 
                     var spanOutVertexData = new Span<float>(_vertexBuffer.Value, vertexIndex * ComponentsPerVertex, ComponentsPerVertex);
                     // Object Ids
-                    spanOutVertexData[0] = v.ObjectId;
-                    spanOutVertexData[1] = triangle.ObjectId;
+                    spanOutVertexData[0] = v.VertexId;
+                    spanOutVertexData[1] = triangle.TriangleId;
                     // Coordinates
                     spanOutVertexData[2] = v.Coordinates.X;
                     spanOutVertexData[3] = v.Coordinates.Y;
                     spanOutVertexData[4] = v.Coordinates.Z;
                     // Colour
-                    spanOutVertexData[5] = vertexColor?.Red ?? 1.0f;
-                    spanOutVertexData[6] = vertexColor?.Green ?? 1.0f;
-                    spanOutVertexData[7] = vertexColor?.Blue ?? 1.0f;
-                    spanOutVertexData[8] = vertexColor?.Opacity ?? 1.0f;
+                    spanOutVertexData[5] = vertexColor?.VertexColor.Red ?? 1.0f;
+                    spanOutVertexData[6] = vertexColor?.VertexColor.Green ?? 1.0f;
+                    spanOutVertexData[7] = vertexColor?.VertexColor.Blue ?? 1.0f;
+                    spanOutVertexData[8] = vertexColor?.VertexColor.Opacity ?? 1.0f;
                     // Texture coords
                     spanOutVertexData[9] = texCoords == default ? 0.0f : texCoords.U;
                     spanOutVertexData[10] = texCoords == default ? 0.0f : texCoords.V;

@@ -1,4 +1,5 @@
-﻿using Trl_3D.Core.Assertions;
+﻿using System.Linq;
+using Trl_3D.Core.Assertions;
 
 namespace Trl_3D.Core.Scene
 {
@@ -9,5 +10,7 @@ namespace Trl_3D.Core.Scene
         }
 
         public Coordinate3d Coordinates { get; set; }
+
+        public ulong VertexId => ObjectIds.Single();
     }
 }

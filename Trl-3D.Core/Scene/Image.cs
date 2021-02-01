@@ -1,4 +1,6 @@
-﻿namespace Trl_3D.Core.Scene
+﻿using System.Linq;
+
+namespace Trl_3D.Core.Scene
 {
     public class Texture : SceneGraphObjectBase
     {
@@ -14,5 +16,7 @@
         public int Width { get; }
 
         public byte[] ImageDataRgba { get; }
+
+        public ulong TextureId => ObjectIds.Single();
     }
 }

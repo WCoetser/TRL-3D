@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenTK.Mathematics;
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
@@ -41,16 +40,17 @@ namespace Trl_3D.SampleApp
                 // Update triangle vertex positions and send to update channel
                 // so that their positions are updated and vertex buffers are refreshed
 
-                var angleDegrees = (totalTime / 1000f) * 1000;
+                var angleDegrees = totalTime / 2.0;
 
                 var angle = MathHelper.DegreesToRadians(angleDegrees);
-                var modelTransformMatrix = Matrix4.CreateRotationZ(angle);
+                var modelTransformMatrix = Matrix4.CreateRotationZ((float)angle);
 
+                // Rotate the triangle by updating vertex positions, which will update the vertex buffers on
+                // the renderer
                 var assetionBatch = new AssertionBatch
                 {
                     Assertions = new IAssertion[]
-                    {
-                        // Define vertices
+                    {                        
                         new Vertex(0, new Coordinate3d(-0.33f, 0.0f, 0.0f).Transform(modelTransformMatrix)),
                         new Vertex(1, new Coordinate3d(0.33f, 0.0f, 0.0f).Transform(modelTransformMatrix)),
                         new Vertex(2, new Coordinate3d(0.0f,  0.33f, 0.0f).Transform(modelTransformMatrix)),

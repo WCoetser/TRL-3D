@@ -15,7 +15,7 @@ namespace Trl_3D.OpenTk.Textures
 
         public Texture LoadTexture(Core.Scene.Texture texture)
         {
-            if (_knownTextures.TryGetValue(texture.ObjectId, out Texture textureOut))
+            if (_knownTextures.TryGetValue(texture.TextureId, out Texture textureOut))
             {
                 return textureOut;
             }
@@ -38,11 +38,11 @@ namespace Trl_3D.OpenTk.Textures
 
             textureOut = new Texture
             {
-                ObjectId = texture.ObjectId,
+                ObjectId = texture.TextureId,
                 OpenGLTextureId = textureIds[0]
             };
 
-            _knownTextures.Add(texture.ObjectId, textureOut);
+            _knownTextures.Add(texture.TextureId, textureOut);
 
             return textureOut;
         }

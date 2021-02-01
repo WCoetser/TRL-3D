@@ -8,7 +8,6 @@ using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
 using Trl_3D.Core.Scene;
 using Trl_3D.OpenTk.GeometryBuffers;
-using Trl_3D.OpenTk.RenderCommands;
 
 namespace Trl_3D.OpenTk.AssertionProcessor
 {
@@ -87,6 +86,8 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         /// </summary>
         public async IAsyncEnumerable<IRenderCommand> Process(AssertionBatch assertionBatch)
         {
+            var knownUpdateObjects = new List<ObjectIdentityBase>();
+
             foreach (var assertion in assertionBatch.Assertions)
             {
                 if (assertion is GetPickingInfo getPickingInfo)
@@ -119,6 +120,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                     if (assertionVertex.Coordinates != default)
                     {
                         vertex.Coordinates = assertionVertex.Coordinates;
+                        knownUpdateObjects.Add(vertex);
                     }
                 }
                 else if (assertion is Core.Assertions.Triangle triangle)
@@ -144,7 +146,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 }
                 else if (assertion is SurfaceColor surfaceColor)
                 {
-                    _sceneGraph.SurfaceVertexColors[surfaceColor.ObjectIdentifier] = surfaceColor.vertexColor;
+                    _sceneGraph.SurfaceVertexColors[surfaceColor.ObjectIdentifier] = surfaceColor;
                 }
                 else
                 {
@@ -152,34 +154,44 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 }
             }
 
+            // Split objects into new and update lists
+            var newRenderTriangles = new List<Core.Scene.Triangle>();
+
             // Get known complete geometry
-            var renderTriangles = new List<Core.Scene.Triangle>();
             LinkedListNode<Core.Scene.Triangle> currentNode = _partialObjectsWatchList.First;
             while (currentNode != null)
             {
+                if (_bufferManager.HasExistingTriangleBuffer(currentNode.Value))
+                {
+                    knownUpdateObjects.Add(currentNode.Value);
+                    currentNode = currentNode.Next;
+                    continue;
+                }
+                
                 if (!currentNode.Value.HasMinimumRenderInfo)
                 {
                     currentNode = currentNode.Next;
+                    continue;
                 }
-                else
+
+                newRenderTriangles.Add(currentNode.Value);
+                var next = currentNode.Next;
+                _partialObjectsWatchList.Remove(currentNode);
+                currentNode = next;
+            }
+
+            if (newRenderTriangles.Any())
+            {
+                yield return _bufferManager.CreateRenderCommands(newRenderTriangles);                
+            }
+
+            if (knownUpdateObjects.Any())
+            {
+                foreach (var reloadCommand in _bufferManager.CreateReloadCommands(knownUpdateObjects))
                 {
-                    renderTriangles.Add(currentNode.Value);
-                    var next = currentNode.Next;
-                    _partialObjectsWatchList.Remove(currentNode);
-                    currentNode = next;
+                    yield return reloadCommand;
                 }
             }
-
-            if (renderTriangles.Any())
-            {
-                yield return _bufferManager.CreateRenderCommands(renderTriangles);                
-            }
-
-            //// Test 
-            foreach (var reloadCommand in _bufferManager.CreateReloadCommands())
-            {
-                yield return reloadCommand;
-            }            
         }
     }
 }
