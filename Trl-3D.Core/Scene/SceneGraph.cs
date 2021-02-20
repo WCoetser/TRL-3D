@@ -17,7 +17,10 @@ namespace Trl_3D.Core.Scene
         public Dictionary<ulong, Texture> Textures { get; }
         public Dictionary<(ulong triangleId, ulong vertexId), TexCoords> SurfaceVertexTexCoords { get; }
         public Dictionary<(ulong triangleId, ulong vertexId), SurfaceColor> SurfaceVertexColors { get; }
+        
+        // TODO: Copy this to freeze matrix during render step
         public Matrix4 ViewMatrix { get; set; }
+
         public Matrix4 ProjectionMatrix { get; set; }
 
         public SceneGraph()

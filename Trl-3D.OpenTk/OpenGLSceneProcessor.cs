@@ -13,6 +13,7 @@ using Trl_3D.Core.Abstractions;
 using Trl_3D.OpenTk.RenderCommands;
 using System.Threading.Tasks;
 using Trl_3D.Core.Events;
+using Trl_3D.Core.Scene;
 
 namespace Trl_3D.OpenTk
 {
@@ -21,6 +22,7 @@ namespace Trl_3D.OpenTk
         private readonly IShaderCompiler _shaderCompiler;
         private readonly IServiceProvider _serviceProvider;
         private readonly IRenderWindow _renderWindow;
+        private readonly SceneGraph _sceneGraph;
         private readonly ITextureLoader _textureLoader;
         private readonly ILogger _logger;
         private readonly ICancellationTokenManager _cancellationTokenManager;
@@ -34,7 +36,7 @@ namespace Trl_3D.OpenTk
         private bool _windowSizeChanged;
         private RequestPickingInfo _requestPicking;
 
-        public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow)
+        public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow, SceneGraph sceneGraph)
         {
             _serviceProvider = serviceProvider;
             _cancellationTokenManager = _serviceProvider.GetRequiredService<ICancellationTokenManager>();
@@ -43,9 +45,12 @@ namespace Trl_3D.OpenTk
             _textureLoader = _serviceProvider.GetRequiredService<ITextureLoader>();
 
             _renderWindow = renderWindow; // This cannot be passed via the service provider otherwise there will be a cycle in the DI graph
+            _sceneGraph = sceneGraph;
             _renderList = new LinkedList<IRenderCommand>();
             _renderInfo = new RenderInfo();
             _requestPicking = null;
+
+            GL.Enable(EnableCap.DepthTest);
         }
 
         internal void ResizeRenderWindow(int width, int height)
@@ -105,6 +110,8 @@ namespace Trl_3D.OpenTk
         {
             _renderInfo.TotalRenderTime += timeSinceLastFrameSeconds;
             _renderInfo.FrameRate = 1.0 / timeSinceLastFrameSeconds;
+            _renderInfo.CurrentViewMatrix = _sceneGraph.ViewMatrix;
+            _renderInfo.CurrentProjectionMatrix = _sceneGraph.ProjectionMatrix;
 
             if (_windowSizeChanged)
             {

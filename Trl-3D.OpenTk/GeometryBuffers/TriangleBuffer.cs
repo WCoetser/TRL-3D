@@ -12,6 +12,7 @@ using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
 using System.IO;
+using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
 {
@@ -245,8 +246,8 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             _shaderProgram.UseProgram();
 
             // Set camera location and projection
-            _shaderProgram.SetUniform("viewMatrix", _sceneGraph.ViewMatrix);
-            _shaderProgram.SetUniform("projectionMatrix", _sceneGraph.ProjectionMatrix);
+            _shaderProgram.SetUniform("viewMatrix", info.CurrentViewMatrix);
+            _shaderProgram.SetUniform("projectionMatrix", info.CurrentProjectionMatrix);
             _shaderProgram.SetUniform("isInPickingMode", isInPickingMode);
 
             // TODO: Remove ToArray()
@@ -298,22 +299,20 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             int screenYInverted = info.Height - screenY - 1;
             GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, backBufferDump);
 
-            // TODO: Get depth buffer value to un-project back to world coordinates, requires reading depth buffer ... not available in OpenGL 4.5?
-            //float[] zValue = new float[1];
-            //GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
-
             // In this case nothing has been hit and we are looking at the clear colour
             if (backBufferDump[0] == 0
                 && backBufferDump[1] == 0
                 && backBufferDump[2] == 0
                 && backBufferDump[3] == 0)
             {
-                return new PickingInfo(null, info.TotalRenderTime, screenX, screenY); ;
+                return new PickingInfo(null, info.TotalRenderTime, screenX, screenY, null);
             }
 
+            float[] zValue = new float[1];
+            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
+                        
             ulong surfaceIdOut = ((ulong)backBufferDump[0] * 256 * 256) + ((ulong)backBufferDump[1] * 256) + (ulong)backBufferDump[2];
-
-            return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY);
+            return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY, zValue[0]);
         }
 
         public void Reload()

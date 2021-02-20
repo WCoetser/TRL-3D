@@ -80,7 +80,8 @@ namespace Trl_3D.OpenTk
         public void Initialize(IServiceProvider serviceProvider)
         {
             _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
-            _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this);
+            var sceneGraph = serviceProvider.GetRequiredService<SceneGraph>();
+            _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this, sceneGraph);
             _cancellationTokenManager = serviceProvider.GetRequiredService<ICancellationTokenManager>();
         }
     }

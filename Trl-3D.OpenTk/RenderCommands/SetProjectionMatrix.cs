@@ -27,7 +27,7 @@ namespace Trl_3D.OpenTk.RenderCommands
         {
             // This needs to be in the render method because aspect ratio can change after window resize
             _sceneGraph.ProjectionMatrix = Matrix4.CreatePerspectiveFieldOfView(_fieldOfViewVerticalRadians,
-                (float)renderInfo.Width / (float)renderInfo.Height, _nearPlane, _farPlane);
+                (float)renderInfo.Width / renderInfo.Height, _nearPlane, _farPlane);
         }
 
         public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
