@@ -9,15 +9,16 @@ using Trl_3D.Core.Abstractions;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Trl_3D.SampleApp
 {
     public class ImageLoader : IImageLoader
     {
         private readonly ILogger<ImageLoader> _logger;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
 
-        public ImageLoader(ILogger<ImageLoader> logger, ICancellationTokenManager cancellationTokenManager)
+        public ImageLoader(ILogger<ImageLoader> logger, CancellationTokenSource cancellationTokenManager)
         {
             _logger = logger;
             _cancellationTokenManager = cancellationTokenManager;
@@ -35,7 +36,7 @@ namespace Trl_3D.SampleApp
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
 
-                var imageRaw = await File.ReadAllBytesAsync(uri.LocalPath, _cancellationTokenManager.CancellationToken);                                                
+                var imageRaw = await File.ReadAllBytesAsync(uri.LocalPath, _cancellationTokenManager.Token);
                 using var inputImage = Image.Load(imageRaw);
                 byte[] outputBufferRgba = new byte[inputImage.Width * inputImage.Height * 4];
                

@@ -2,17 +2,18 @@
 
 using OpenTK.Graphics.OpenGL4;
 using Trl_3D.Core.Events;
+using System.Threading;
 
 namespace Trl_3D.OpenTk.RenderCommands
 {
     public class GrabScreenshot : IRenderCommand
     {
         private readonly IRenderWindow _renderWindow;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
 
         public RenderProcessPosition ProcessStep => RenderProcessPosition.AfterContent;
 
-        public GrabScreenshot(IRenderWindow renderWindow, ICancellationTokenManager cancellationTokenManager)
+        public GrabScreenshot(IRenderWindow renderWindow, CancellationTokenSource cancellationTokenManager)
         {
             _renderWindow = renderWindow;
             _cancellationTokenManager = cancellationTokenManager;
@@ -32,8 +33,8 @@ namespace Trl_3D.OpenTk.RenderCommands
             GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.UnsignedByte, backBufferDump);
 
             var screenCaptureEvent = new ScreenCaptureEvent(backBufferDump, renderInfo.Width, renderInfo.Height);
-            var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent, _cancellationTokenManager.CancellationToken).AsTask();
-            t.Wait(_cancellationTokenManager.CancellationToken);
+            var t = _renderWindow.EventChannel.Writer.WriteAsync(screenCaptureEvent, _cancellationTokenManager.Token).AsTask();
+            t.Wait(_cancellationTokenManager.Token);
         }
 
         public void SetState(RenderInfo renderInfo)

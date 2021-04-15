@@ -9,7 +9,7 @@ using OpenTK.Graphics.OpenGL4;
 using Trl_3D.Core.Events;
 using System.Threading.Tasks;
 using Trl_3D.Core.Scene;
-using Trl_3D.OpenTk.RenderCommands;
+using System.Threading;
 
 namespace Trl_3D.OpenTk
 {
@@ -17,7 +17,7 @@ namespace Trl_3D.OpenTk
     {
         private ILogger _logger;
         private OpenGLSceneProcessor _openGLSceneProcessor;
-        private ICancellationTokenManager _cancellationTokenManager;
+        private CancellationTokenSource _cancellationTokenManager;
 
         public Channel<IRenderCommand> RenderCommandUpdatesChannel { get; private set; }
 
@@ -41,9 +41,9 @@ namespace Trl_3D.OpenTk
             var userEvent = new UserInputStateEvent(KeyboardState.GetSnapshot(), MouseState.GetSnapshot(), obj.Time);
             var task = Task.Run(async () =>
             {
-                await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.CancellationToken).AsTask();
+                await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.Token).AsTask();
             });
-            task.Wait(_cancellationTokenManager.CancellationToken);
+            task.Wait(_cancellationTokenManager.Token);
         }
 
         private void MainWindowRenderFrame(FrameEventArgs e)
@@ -82,7 +82,7 @@ namespace Trl_3D.OpenTk
             _logger = serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
             var sceneGraph = serviceProvider.GetRequiredService<SceneGraph>();
             _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this, sceneGraph);
-            _cancellationTokenManager = serviceProvider.GetRequiredService<ICancellationTokenManager>();
+            _cancellationTokenManager = serviceProvider.GetRequiredService<CancellationTokenSource>();
         }
     }
 }

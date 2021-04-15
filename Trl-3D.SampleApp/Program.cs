@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Trl_3D.Core;
@@ -21,7 +22,7 @@ namespace Trl_3D.SampleApp
         {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
 
-            ICancellationTokenManager cancellationTokenManager = null;
+            CancellationTokenSource cancellationTokenManager = null;
             IHost host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices(ConfigureServices)
                 .Build();
@@ -31,7 +32,7 @@ namespace Trl_3D.SampleApp
 
             try
             {
-                cancellationTokenManager = serviceProvider.GetRequiredService<ICancellationTokenManager>();
+                cancellationTokenManager = serviceProvider.GetRequiredService<CancellationTokenSource>();
 
                 // Produce scene elements (assertions) on seperate thread using producer-consumer pattern
                 var loader = serviceProvider.GetRequiredService<IAssertionLoader>();
@@ -54,7 +55,7 @@ namespace Trl_3D.SampleApp
                 renderWindow.Run();
 
                 // Terminate producer/consumer threads
-                cancellationTokenManager.CancelToken();
+                cancellationTokenManager.Cancel();
 
                 // Await tasks to catch any lingering unhandled exceptions
                 // ---
@@ -63,7 +64,7 @@ namespace Trl_3D.SampleApp
                 await Task.WhenAll(sceneProducerTask, sceneConsumerTask, eventProcessorTask, animationsTask);
             }
             catch (OperationCanceledException e) 
-                when (e.CancellationToken == cancellationTokenManager.CancellationToken
+                when (e.CancellationToken == cancellationTokenManager.Token
                     && cancellationTokenManager.IsCancellationRequested)
             {
                 // This will be thrown when producer/consumer threads terminate due to cancellation tokens

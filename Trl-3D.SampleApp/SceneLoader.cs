@@ -6,6 +6,7 @@ using Trl_3D.Core.Abstractions;
 using System.Threading.Tasks;
 using System;
 using System.IO;
+using System.Threading;
 
 namespace Trl_3D.SampleApp
 {
@@ -13,11 +14,11 @@ namespace Trl_3D.SampleApp
     {
         private readonly ILogger<SceneLoader> _logger;
         private readonly IAssertionProcessor _scene;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
 
         public SceneLoader(ILogger<SceneLoader> logger, 
-                            IAssertionProcessor scene, 
-                            ICancellationTokenManager cancellationTokenManager)
+                            IAssertionProcessor scene,
+                            CancellationTokenSource cancellationTokenManager)
         {
             _logger = logger;
             _scene = scene;
@@ -46,7 +47,7 @@ namespace Trl_3D.SampleApp
             };
 
             // Send the assertions to the rendering system
-            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch0, _cancellationTokenManager.CancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch0, _cancellationTokenManager.Token);
 
             var batch1 = new AssertionBatch
             {
@@ -82,7 +83,7 @@ namespace Trl_3D.SampleApp
             };
 
             // Send the assertions to the rendering system
-            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.CancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch1, _cancellationTokenManager.Token);
 
             // Render second test batch
             var batch2 = new AssertionBatch
@@ -103,7 +104,7 @@ namespace Trl_3D.SampleApp
             };
 
             // Send the assertions to the rendering system
-            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch2, _cancellationTokenManager.CancellationToken);
+            await _scene.AssertionUpdatesChannel.Writer.WriteAsync(batch2, _cancellationTokenManager.Token);
         }
     }
 }

@@ -16,6 +16,7 @@ using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Events;
 using Trl_3D.Core.Assertions;
 using OpenTK.Mathematics;
+using System.Threading;
 
 namespace Trl_3D.SampleApp
 {
@@ -23,7 +24,7 @@ namespace Trl_3D.SampleApp
     {
         private readonly IRenderWindow _renderWindow;
         private readonly ILogger<EventProcessor> _logger;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
         private readonly IAssertionProcessor _scene;
 
         private CameraOrientation _currentCameraOrientation;
@@ -33,8 +34,8 @@ namespace Trl_3D.SampleApp
         bool pickingInfoRequested = false;
 
         public EventProcessor(IRenderWindow renderWindow, 
-                            ILogger<EventProcessor> logger, 
-                            ICancellationTokenManager cancellationTokenManager, 
+                            ILogger<EventProcessor> logger,
+                            CancellationTokenSource cancellationTokenManager, 
                             IAssertionProcessor scene)
         {
             _renderWindow = renderWindow;
@@ -48,8 +49,8 @@ namespace Trl_3D.SampleApp
         public async Task StartEventProcessor()
         {
             _logger.LogInformation("EventProcessor started");
-            await foreach (var currenEvent in _renderWindow.EventChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken)
-                .WithCancellation(_cancellationTokenManager.CancellationToken))
+            await foreach (var currenEvent in _renderWindow.EventChannel.Reader.ReadAllAsync(_cancellationTokenManager.Token)
+                .WithCancellation(_cancellationTokenManager.Token))
             {
                 try
                 {

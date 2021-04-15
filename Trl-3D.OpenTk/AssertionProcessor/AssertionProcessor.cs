@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
@@ -16,7 +17,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         private readonly ILogger<AssertionProcessor> _logger;
 
         private readonly IRenderWindow _renderWindow;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
         private readonly IImageLoader _imageLoader;
         private readonly SceneGraph _sceneGraph;
 
@@ -29,7 +30,7 @@ namespace Trl_3D.OpenTk.AssertionProcessor
         public AssertionProcessor(IImageLoader imageLoader,
                                   ILogger<AssertionProcessor> logger,
                                   IRenderWindow renderWindow,
-                                  ICancellationTokenManager cancellationTokenManager,
+                                  CancellationTokenSource cancellationTokenManager,
                                   SceneGraph sceneGraph,
                                   BufferManager bufferManager)
         {
@@ -49,8 +50,8 @@ namespace Trl_3D.OpenTk.AssertionProcessor
 
         public async Task StartAssertionConsumer()
         {
-            await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.CancellationToken)
-                .WithCancellation(_cancellationTokenManager.CancellationToken))
+            await foreach (var assertionBatch in AssertionUpdatesChannel.Reader.ReadAllAsync(_cancellationTokenManager.Token)
+                .WithCancellation(_cancellationTokenManager.Token))
             {
                 if (assertionBatch.Assertions == null || !assertionBatch.Assertions.Any())
                 {
@@ -62,10 +63,10 @@ namespace Trl_3D.OpenTk.AssertionProcessor
                 try
                 {
                     await foreach (var renderCommand in Process(assertionBatch)
-                        .WithCancellation(_cancellationTokenManager.CancellationToken))
+                        .WithCancellation(_cancellationTokenManager.Token))
                     {
                         await _renderWindow.RenderCommandUpdatesChannel.Writer.WriteAsync(renderCommand, 
-                            _cancellationTokenManager.CancellationToken);
+                            _cancellationTokenManager.Token);
                     }
                 }
                 catch (OperationCanceledException)

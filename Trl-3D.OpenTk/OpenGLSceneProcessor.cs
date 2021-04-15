@@ -14,6 +14,7 @@ using Trl_3D.OpenTk.RenderCommands;
 using System.Threading.Tasks;
 using Trl_3D.Core.Events;
 using Trl_3D.Core.Scene;
+using System.Threading;
 
 namespace Trl_3D.OpenTk
 {
@@ -25,7 +26,7 @@ namespace Trl_3D.OpenTk
         private readonly SceneGraph _sceneGraph;
         private readonly ITextureLoader _textureLoader;
         private readonly ILogger _logger;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
 
         // Render lists
         private readonly LinkedList<IRenderCommand> _renderList;
@@ -39,7 +40,7 @@ namespace Trl_3D.OpenTk
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow, SceneGraph sceneGraph)
         {
             _serviceProvider = serviceProvider;
-            _cancellationTokenManager = _serviceProvider.GetRequiredService<ICancellationTokenManager>();
+            _cancellationTokenManager = _serviceProvider.GetRequiredService<CancellationTokenSource>();
             _logger = _serviceProvider.GetRequiredService<ILogger<RenderWindow>>();
             _shaderCompiler = _serviceProvider.GetRequiredService<IShaderCompiler>();
             _textureLoader = _serviceProvider.GetRequiredService<ITextureLoader>();
@@ -159,7 +160,7 @@ namespace Trl_3D.OpenTk
                     var writeTask = Task.Run(async () =>
                     {
                         await _renderWindow.EventChannel.Writer.WriteAsync(new PickingFeedback(currentPickingInfo),
-                            _cancellationTokenManager.CancellationToken);
+                            _cancellationTokenManager.Token);
                     });
                     writeTask.Wait();
                 }

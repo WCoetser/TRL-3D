@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using OpenTK.Mathematics;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Trl_3D.Core.Abstractions;
 using Trl_3D.Core.Assertions;
@@ -15,11 +16,11 @@ namespace Trl_3D.SampleApp
     {
         private readonly ILogger<Animation> _logger;
         private readonly IAssertionProcessor _scene;
-        private readonly ICancellationTokenManager _cancellationTokenManager;
+        private readonly CancellationTokenSource _cancellationTokenManager;
 
         public Animation(ILogger<Animation> logger,
                             IAssertionProcessor scene,
-                            ICancellationTokenManager cancellationTokenManager)
+                            CancellationTokenSource cancellationTokenManager)
         {
             _logger = logger;
             _scene = scene;
@@ -59,7 +60,7 @@ namespace Trl_3D.SampleApp
                         new Vertex(7, new Coordinate3d(-0.66f, -0.33f, 0.0f).Transform(modelTransformMatrix))
                     }
                 };
-                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(assetionBatch, _cancellationTokenManager.CancellationToken);
+                await _scene.AssertionUpdatesChannel.Writer.WriteAsync(assetionBatch, _cancellationTokenManager.Token);
                 await Task.Delay(threadDelay);
 
                 totalTime += threadDelay;
