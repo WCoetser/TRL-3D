@@ -32,6 +32,7 @@ namespace Trl_3D.SampleApp
         // 1 at a time
         bool screenshotEnqueued = false;
         bool pickingInfoRequested = false;
+        bool exitCalled = false;
 
         public EventProcessor(IRenderWindow renderWindow, 
                             ILogger<EventProcessor> logger,
@@ -106,7 +107,11 @@ namespace Trl_3D.SampleApp
             // Escape = quit
             if (userInputEvent.KeyboardState.WasKeyDown(Keys.Escape))
             {
-                _renderWindow.Close();
+                if (!exitCalled) 
+                {
+                    exitCalled = true;
+                    _renderWindow.Close();
+                }
             }
 
             // Take screenshot

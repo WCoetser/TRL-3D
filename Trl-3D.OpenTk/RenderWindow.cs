@@ -63,18 +63,19 @@ namespace Trl_3D.OpenTk
             _openGLSceneProcessor.ResizeRenderWindow(obj.Width, obj.Height);
         }
 
-        private void MainWindowClosed()
-        {
-            _openGLSceneProcessor.ReleaseResources();
-            _logger.LogInformation("RenderWindow Closed complete");
-        }
-
         private void MainWindowLoad()
         {
-            Closed += MainWindowClosed;
+            Closing += MainWindowClosing;
 
             _logger.LogInformation($"Open GL version: {GL.GetString(StringName.Version)}");
             _logger.LogInformation("RenderWindow Load complete");
+        }
+
+        private void MainWindowClosing(System.ComponentModel.CancelEventArgs obj)
+        {
+            _logger.LogInformation("RenderWindow release resources started");
+            _openGLSceneProcessor.ReleaseResources();
+            _logger.LogInformation("RenderWindow release resources ended");
         }
 
         public void Initialize(IServiceProvider serviceProvider)
@@ -83,6 +84,11 @@ namespace Trl_3D.OpenTk
             var sceneGraph = serviceProvider.GetRequiredService<SceneGraph>();
             _openGLSceneProcessor = new OpenGLSceneProcessor(serviceProvider, this, sceneGraph);
             _cancellationTokenManager = serviceProvider.GetRequiredService<CancellationTokenSource>();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
     }
 }

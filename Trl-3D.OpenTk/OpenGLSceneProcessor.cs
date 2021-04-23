@@ -15,11 +15,14 @@ using System.Threading.Tasks;
 using Trl_3D.Core.Events;
 using Trl_3D.Core.Scene;
 using System.Threading;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace Trl_3D.OpenTk
 {
     public class OpenGLSceneProcessor
     {
+        // Dependency injection
         private readonly IShaderCompiler _shaderCompiler;
         private readonly IServiceProvider _serviceProvider;
         private readonly IRenderWindow _renderWindow;
@@ -37,6 +40,14 @@ namespace Trl_3D.OpenTk
         private bool _windowSizeChanged;
         private RequestPickingInfo _requestPicking;
 
+        // Frame buffer objects
+        private int _defaultFrameBufferId;
+
+        // Capture OpenGL log messages to .NET logger
+        // Reference: https://gist.github.com/Vassalware/d47ff5e60580caf2cbbf0f31aa20af5d
+        private GCHandle _gcHandle;
+        private static DebugProc _debugProc;
+
         public OpenGLSceneProcessor(IServiceProvider serviceProvider, IRenderWindow renderWindow, SceneGraph sceneGraph)
         {
             _serviceProvider = serviceProvider;
@@ -51,7 +62,47 @@ namespace Trl_3D.OpenTk
             _renderInfo = new RenderInfo();
             _requestPicking = null;
 
+            // Get human readable log messages during debugging
+            if (Debugger.IsAttached)
+            {
+                GL.Enable(EnableCap.DebugOutput);
+                _debugProc = DebugMessageCallback;
+                _gcHandle = GCHandle.Alloc(_debugProc);
+                GL.DebugMessageCallback(_debugProc, IntPtr.Zero);
+            }
+
             GL.Enable(EnableCap.DepthTest);
+
+            // Save default frame buffer id for later blitting
+            GL.GetInteger(GetPName.FramebufferBinding, out _defaultFrameBufferId);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _defaultFrameBufferId);
+        }
+
+        internal void DebugMessageCallback(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr messageASCII, IntPtr _)
+        {
+            var message = Marshal.PtrToStringAnsi(messageASCII, length);
+            message = $"{source} - {type} - {severity} - {message}";
+            switch (severity)
+            {
+                case DebugSeverity.DontCare:
+                case DebugSeverity.DebugSeverityNotification:
+                    _logger.LogTrace(message);
+                    break;
+                case DebugSeverity.DebugSeverityLow:
+                case DebugSeverity.DebugSeverityMedium:
+                    _logger.LogWarning(message);
+                    break;
+                case DebugSeverity.DebugSeverityHigh:
+                    _logger.LogError(message);
+                    break;
+                default:
+                    throw new Exception("Unknown severity");
+            }
+
+            if (type == DebugType.DebugTypeError)
+            {
+                throw new Exception(message);
+            }
         }
 
         internal void ResizeRenderWindow(int width, int height)
@@ -69,12 +120,6 @@ namespace Trl_3D.OpenTk
             }
 
             renderCommand.SetState(_renderInfo);
-
-            var err = GL.GetError();
-            if (err != ErrorCode.NoError)
-            {
-                throw new Exception($"Set state: {err}");
-            }
 
             InsertCommandInRenderOrder(renderCommand);
         }
@@ -108,7 +153,7 @@ namespace Trl_3D.OpenTk
         }
 
         public void Render(double timeSinceLastFrameSeconds)
-        {
+        {            
             _renderInfo.TotalRenderTime += timeSinceLastFrameSeconds;
             _renderInfo.FrameRate = 1.0 / timeSinceLastFrameSeconds;
             _renderInfo.CurrentViewMatrix = _sceneGraph.ViewMatrix;
@@ -198,6 +243,12 @@ namespace Trl_3D.OpenTk
             }
 
             _textureLoader.Dispose();
+
+            if (_gcHandle != default)
+            {
+                _gcHandle.Free();
+                _gcHandle = default;
+            }
 
             _logger.LogInformation("Render commands disposed");
         }
