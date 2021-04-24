@@ -293,17 +293,18 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             // Render with picking mode so that surface IDs are generated as colours
             Render(info, true);
 
+            GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
+
             // Get surface ID
-            byte[] backBufferDump = new byte[4];
-            GL.ReadBuffer(ReadBufferMode.Back);
+            byte[] colourAttachment1Dump = new byte[4];
             int screenYInverted = info.Height - screenY - 1;
-            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, backBufferDump);
+            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, colourAttachment1Dump);
 
             // In this case nothing has been hit and we are looking at the clear colour
-            if (backBufferDump[0] == 0
-                && backBufferDump[1] == 0
-                && backBufferDump[2] == 0
-                && backBufferDump[3] == 0)
+            if (colourAttachment1Dump[0] == 0
+                && colourAttachment1Dump[1] == 0
+                && colourAttachment1Dump[2] == 0
+                && colourAttachment1Dump[3] == 0)
             {
                 return new PickingInfo(null, info.TotalRenderTime, screenX, screenY, null);
             }
@@ -311,7 +312,7 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             float[] zValue = new float[1];
             GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
                         
-            ulong surfaceIdOut = ((ulong)backBufferDump[0] * 256 * 256) + ((ulong)backBufferDump[1] * 256) + (ulong)backBufferDump[2];
+            ulong surfaceIdOut = ((ulong)colourAttachment1Dump[0] * 256 * 256) + ((ulong)colourAttachment1Dump[1] * 256) + (ulong)colourAttachment1Dump[2];
             return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY, zValue[0]);
         }
 

@@ -24,7 +24,7 @@ namespace Trl_3D.OpenTk
         public Channel<IEvent> EventChannel { get; private set; }
 
         // Release resources without overlapping with rendering operations
-        private object _updageFrameLock = new object();
+        private object _updateFrameLock = new object();
         private object _renderFrameLock = new object();
         private object _resizeWindowLock = new object();
         private bool _shutdownInProgress = false;
@@ -44,7 +44,8 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowUpdateFrame(FrameEventArgs obj)
         {
-            lock (_updageFrameLock)
+            // Use seperate locks for update and render to avoid stuttering
+            lock (_updateFrameLock)
             {
                 if (_shutdownInProgress)
                 {
@@ -62,6 +63,7 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
+            // Use seperate locks for update and render to avoid stuttering
             lock (_renderFrameLock)
             {
                 if (_shutdownInProgress)
@@ -113,7 +115,7 @@ namespace Trl_3D.OpenTk
         {
             lock (_resizeWindowLock)
             {
-                lock (_updageFrameLock)
+                lock (_updateFrameLock)
                 {
                     lock (_renderFrameLock)             
                     {

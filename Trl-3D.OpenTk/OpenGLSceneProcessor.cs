@@ -42,9 +42,11 @@ namespace Trl_3D.OpenTk
 
         // Frame buffer objects
         private int _defaultFrameBufferId;
+        private int _mrtFrameBufferId;
+        private int _mrtFrameBufferTextureId;
+        private int _mrtFrameBufferDepthId;
 
         // Capture OpenGL log messages to .NET logger
-        // Reference: https://gist.github.com/Vassalware/d47ff5e60580caf2cbbf0f31aa20af5d
         private GCHandle _gcHandle;
         private static DebugProc _debugProc;
 
@@ -76,6 +78,37 @@ namespace Trl_3D.OpenTk
             // Save default frame buffer id for later blitting
             GL.GetInteger(GetPName.FramebufferBinding, out _defaultFrameBufferId);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, _defaultFrameBufferId);
+
+            InitFrameBuffer(640, 360);
+        }
+
+        private void InitFrameBuffer(int width, int height)
+        {
+            // Generate extra frame buffer for main rendering, to be blitted to default frame buffer
+            _mrtFrameBufferId = GL.GenFramebuffer();
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);
+
+            // Bind main texture that will eventually end up on the screen as first target
+            _mrtFrameBufferTextureId = GL.GenTexture();
+            GL.BindTexture(TextureTarget.Texture2D, _mrtFrameBufferTextureId);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)All.Repeat);
+            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)All.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)All.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)All.Nearest);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height,
+                0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _mrtFrameBufferTextureId, 0);
+
+            // Bind depth buffer
+            _mrtFrameBufferDepthId = GL.GenRenderbuffer();
+            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _mrtFrameBufferDepthId);
+            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.DepthComponent, width, height);
+            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _mrtFrameBufferDepthId);
+
+            if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
+            {
+                throw new Exception("MRT frame buffer is incomplete.");
+            }
         }
 
         internal void DebugMessageCallback(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr messageASCII, IntPtr _)
@@ -96,7 +129,8 @@ namespace Trl_3D.OpenTk
                     _logger.LogError(message);
                     break;
                 default:
-                    throw new Exception("Unknown severity");
+                    // Unknown severity
+                    throw new Exception(message);
             }
 
             if (type == DebugType.DebugTypeError)
@@ -161,7 +195,17 @@ namespace Trl_3D.OpenTk
 
             if (_windowSizeChanged)
             {
+                GL.BindFramebuffer(FramebufferTarget.Framebuffer, _defaultFrameBufferId);
                 GL.Viewport(0, 0, _renderInfo.Width, _renderInfo.Height);
+
+                // Clean up existing frame buffer
+                GL.DeleteFramebuffer(_mrtFrameBufferId);
+                GL.DeleteTexture(_mrtFrameBufferTextureId);
+                GL.DeleteRenderbuffer(_mrtFrameBufferDepthId);
+
+                // Create new MRT frameobuffer with resized dimensions
+                InitFrameBuffer(_renderInfo.Width, _renderInfo.Height);
+
                 _windowSizeChanged = false;
                 _logger.LogInformation($"Window resized to {_renderInfo.Width}x{_renderInfo.Height}={_renderInfo.Width * _renderInfo.Height} pixels");
             }
@@ -170,6 +214,8 @@ namespace Trl_3D.OpenTk
             {
                 return;
             }
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);
 
             // Render content for picking
             LinkedListNode<IRenderCommand> currentNode = null;            
@@ -230,10 +276,18 @@ namespace Trl_3D.OpenTk
                 }
                 currentNode = next;                
             }
+
+            // Blit MRT source to default frame buffer to display it
+            GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _mrtFrameBufferId);
+            GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _defaultFrameBufferId);
+            GL.BlitFramebuffer(0, 0, _renderInfo.Width - 1, _renderInfo.Height - 1,  // source
+                0, 0, _renderInfo.Width - 1, _renderInfo.Height - 1, // destination
+                ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest); 
         }
 
         public void ReleaseResources()
         {
+            // Dispose render commands
             foreach (var command in _renderList)
             {
                 if (command is IDisposable disposable)
@@ -242,13 +296,20 @@ namespace Trl_3D.OpenTk
                 }
             }
 
+            // Dispose all loaded textures
             _textureLoader.Dispose();
 
+            // Handle used by error handler callback
             if (_gcHandle != default)
             {
                 _gcHandle.Free();
                 _gcHandle = default;
             }
+
+            // Dispose MRT frame buffer
+            GL.DeleteFramebuffer(_mrtFrameBufferId);
+            GL.DeleteTexture(_mrtFrameBufferTextureId);
+            GL.DeleteRenderbuffer(_mrtFrameBufferDepthId);
 
             _logger.LogInformation("Render commands disposed");
         }

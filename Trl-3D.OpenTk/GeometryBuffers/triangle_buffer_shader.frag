@@ -8,7 +8,7 @@ flat in float samplerIndex;
 uniform bool isInPickingMode;
 uniform sampler2D samplers[{{maxFragmentShaderTextureUnits}}];
 
-out vec4 pixelColorOut;
+layout(location = 0) out vec4 pixelColorOut;
 
 void main() 
 {
