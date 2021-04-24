@@ -23,6 +23,12 @@ namespace Trl_3D.OpenTk
 
         public Channel<IEvent> EventChannel { get; private set; }
 
+        // Release resources without overlapping with rendering operations
+        private object _updageFrameLock = new object();
+        private object _renderFrameLock = new object();
+        private object _resizeWindowLock = new object();
+        private bool _shutdownInProgress = false;
+
         public RenderWindow(GameWindowSettings gameWindowSettings, 
                             NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
@@ -38,29 +44,48 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowUpdateFrame(FrameEventArgs obj)
         {
-            var userEvent = new UserInputStateEvent(KeyboardState.GetSnapshot(), MouseState.GetSnapshot(), obj.Time);
-            var task = Task.Run(async () =>
+            lock (_updageFrameLock)
             {
-                await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.Token).AsTask();
-            });
-            task.Wait(_cancellationTokenManager.Token);
+                if (_shutdownInProgress)
+                {
+                    return;
+                }
+
+                var userEvent = new UserInputStateEvent(KeyboardState.GetSnapshot(), MouseState.GetSnapshot(), obj.Time);
+                var task = Task.Run(async () =>
+                {
+                    await EventChannel.Writer.WriteAsync(userEvent, _cancellationTokenManager.Token).AsTask();
+                });
+                task.Wait(_cancellationTokenManager.Token);
+            }
         }
 
         private void MainWindowRenderFrame(FrameEventArgs e)
         {
-            // This should only update the OpenGL state when there are inputs in the scene graph update channel
-            while (RenderCommandUpdatesChannel.Reader.TryRead(out IRenderCommand renderCommand))
+            lock (_renderFrameLock)
             {
-                _openGLSceneProcessor.UpdateState(renderCommand);
-            }
+                if (_shutdownInProgress)
+                {
+                    return;
+                }
 
-            _openGLSceneProcessor.Render(e.Time);
-            SwapBuffers();
+                // This should only update the OpenGL state when there are inputs in the scene graph update channel
+                while (RenderCommandUpdatesChannel.Reader.TryRead(out IRenderCommand renderCommand))
+                {
+                    _openGLSceneProcessor.UpdateState(renderCommand);
+                }
+
+                _openGLSceneProcessor.Render(e.Time);
+                SwapBuffers();
+            }
         }
 
         private void MainWindowResize(ResizeEventArgs obj)
         {
-            _openGLSceneProcessor.ResizeRenderWindow(obj.Width, obj.Height);
+            lock (_resizeWindowLock)
+            {
+                _openGLSceneProcessor.ResizeRenderWindow(obj.Width, obj.Height);
+            }
         }
 
         private void MainWindowLoad()
@@ -73,9 +98,7 @@ namespace Trl_3D.OpenTk
 
         private void MainWindowClosing(System.ComponentModel.CancelEventArgs obj)
         {
-            _logger.LogInformation("RenderWindow release resources started");
-            _openGLSceneProcessor.ReleaseResources();
-            _logger.LogInformation("RenderWindow release resources ended");
+            ReleaseResources();
         }
 
         public void Initialize(IServiceProvider serviceProvider)
@@ -86,8 +109,34 @@ namespace Trl_3D.OpenTk
             _cancellationTokenManager = serviceProvider.GetRequiredService<CancellationTokenSource>();
         }
 
+        protected void ReleaseResources()
+        {
+            lock (_resizeWindowLock)
+            {
+                lock (_updageFrameLock)
+                {
+                    lock (_renderFrameLock)             
+                    {
+                        if (_shutdownInProgress)
+                        {
+                            return;
+                        }
+
+                        _shutdownInProgress = true;
+                        _logger.LogInformation("RenderWindow release resources started");
+                        _openGLSceneProcessor.ReleaseResources();
+                        _logger.LogInformation("RenderWindow release resources ended");
+
+                    }
+                }
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
+            // This should not be needed if window is closed normally
+            ReleaseResources();
+
             base.Dispose(disposing);
         }
     }
