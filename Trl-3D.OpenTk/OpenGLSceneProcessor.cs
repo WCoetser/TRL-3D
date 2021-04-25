@@ -103,8 +103,8 @@ namespace Trl_3D.OpenTk
             GL.BindTexture(TextureTarget.Texture2D, _mrtFrameBufferPickingTextureId);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)All.Nearest);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)All.Nearest);
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height,
-                0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R32f, width, height,
+                0, PixelFormat.Red, PixelType.Float, IntPtr.Zero);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2D, _mrtFrameBufferPickingTextureId, 0);
 
             // Bind depth buffer
@@ -275,18 +275,15 @@ namespace Trl_3D.OpenTk
         private PickingInfo GetPickingInfo(RenderInfo info, int pickLocationX, int pickLocationY)
         {
             // Get surface ID
-            byte[] colourAttachment1Dump = new byte[4];
+            float[] colourAttachment1Dump = new float[1];
             int screenYInverted = info.Height - pickLocationY - 1;
 
             GL.ReadBuffer(ReadBufferMode.ColorAttachment1);
-            GL.ReadPixels(pickLocationX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, colourAttachment1Dump);
+            GL.ReadPixels(pickLocationX, screenYInverted, 1, 1, PixelFormat.Red, PixelType.Float, colourAttachment1Dump);
             GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
 
             // In this case nothing has been hit and we are looking at the clear colour
-            if (colourAttachment1Dump[0] == 0
-                && colourAttachment1Dump[1] == 0
-                && colourAttachment1Dump[2] == 0
-                && colourAttachment1Dump[3] == 0)
+            if (colourAttachment1Dump[0] == 0.0)
             {
                 return new PickingInfo(null, info.TotalRenderTime, pickLocationX, pickLocationY, null);
             }
@@ -294,7 +291,7 @@ namespace Trl_3D.OpenTk
             float[] zValue = new float[1];
             GL.ReadPixels(pickLocationX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
 
-            ulong surfaceIdOut = ((ulong)colourAttachment1Dump[0] * 256 * 256) + ((ulong)colourAttachment1Dump[1] * 256) + (ulong)colourAttachment1Dump[2];
+            ulong surfaceIdOut = (ulong)colourAttachment1Dump[0];
             return new PickingInfo(surfaceIdOut, info.TotalRenderTime, pickLocationX, pickLocationY, zValue[0]);
         }
 

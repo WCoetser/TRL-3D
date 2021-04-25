@@ -23,11 +23,5 @@ void main()
     }
 
     // Object ID of object being rendered
-    float id = surfaceId;
-    float green = mod(id, 256);
-    id = floor(id / 256);
-    float blue = mod(id, 256);
-    id = floor(id / 256);
-    float red =  mod(id, 256);       
-    pickedObjectIdOut = vec4(red / 255, blue / 255, green / 255, 1);
+    pickedObjectIdOut = vec4(surfaceId, 0, 0, 0);
 }
