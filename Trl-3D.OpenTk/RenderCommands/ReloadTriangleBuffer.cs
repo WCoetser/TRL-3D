@@ -20,12 +20,6 @@ namespace Trl_3D.OpenTk.RenderCommands
             // nothing to show here ... the buffer should already have a command
         }
 
-        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
-        {
-            // nothing to show here ... the buffer should already have a command
-            return null;
-        }
-
         public void SetState(RenderInfo renderInfo)
         {
             _triangleBuffer.Reload();

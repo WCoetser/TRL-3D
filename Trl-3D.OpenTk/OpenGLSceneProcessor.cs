@@ -43,7 +43,8 @@ namespace Trl_3D.OpenTk
         // Frame buffer objects
         private int _defaultFrameBufferId;
         private int _mrtFrameBufferId;
-        private int _mrtFrameBufferTextureId;
+        private int _mrtFrameBufferMainTextureId;
+        private int _mrtFrameBufferPickingTextureId;
         private int _mrtFrameBufferDepthId;
 
         // Capture OpenGL log messages to .NET logger
@@ -89,15 +90,22 @@ namespace Trl_3D.OpenTk
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);
 
             // Bind main texture that will eventually end up on the screen as first target
-            _mrtFrameBufferTextureId = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2D, _mrtFrameBufferTextureId);
-            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)All.Repeat);
-            //GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)All.Repeat);
+            _mrtFrameBufferMainTextureId = GL.GenTexture();
+            GL.BindTexture(TextureTarget.Texture2D, _mrtFrameBufferMainTextureId);            
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)All.Nearest);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)All.Nearest);
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height,
                 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _mrtFrameBufferTextureId, 0);
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _mrtFrameBufferMainTextureId, 0);
+
+            // Create extra texture for capuring picking information
+            _mrtFrameBufferPickingTextureId = GL.GenTexture();
+            GL.BindTexture(TextureTarget.Texture2D, _mrtFrameBufferPickingTextureId);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)All.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)All.Nearest);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba8, width, height,
+                0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2D, _mrtFrameBufferPickingTextureId, 0);
 
             // Bind depth buffer
             _mrtFrameBufferDepthId = GL.GenRenderbuffer();
@@ -119,7 +127,7 @@ namespace Trl_3D.OpenTk
             {
                 case DebugSeverity.DontCare:
                 case DebugSeverity.DebugSeverityNotification:
-                    _logger.LogTrace(message);
+                    _logger.LogInformation(message);
                     break;
                 case DebugSeverity.DebugSeverityLow:
                 case DebugSeverity.DebugSeverityMedium:
@@ -193,6 +201,7 @@ namespace Trl_3D.OpenTk
             _renderInfo.CurrentViewMatrix = _sceneGraph.ViewMatrix;
             _renderInfo.CurrentProjectionMatrix = _sceneGraph.ProjectionMatrix;
 
+            // 
             if (_windowSizeChanged)
             {
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, _defaultFrameBufferId);
@@ -200,8 +209,8 @@ namespace Trl_3D.OpenTk
 
                 // Clean up existing frame buffer
                 GL.DeleteFramebuffer(_mrtFrameBufferId);
-                GL.DeleteTexture(_mrtFrameBufferTextureId);
-                GL.DeleteRenderbuffer(_mrtFrameBufferDepthId);
+                GL.DeleteTextures(2, new[] { _mrtFrameBufferPickingTextureId, _mrtFrameBufferMainTextureId });
+                GL.DeleteRenderbuffer(_mrtFrameBufferDepthId);                
 
                 // Create new MRT frameobuffer with resized dimensions
                 InitFrameBuffer(_renderInfo.Width, _renderInfo.Height);
@@ -210,57 +219,18 @@ namespace Trl_3D.OpenTk
                 _logger.LogInformation($"Window resized to {_renderInfo.Width}x{_renderInfo.Height}={_renderInfo.Width * _renderInfo.Height} pixels");
             }
 
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);
+            GL.DrawBuffers(2, new[] { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1 });
+
             if (!_renderList.Any())
             {
                 return;
             }
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);
-
-            // Render content for picking
-            LinkedListNode<IRenderCommand> currentNode = null;            
-            if (_requestPicking != null)
-            {
-                GL.Clear(ClearBufferMask.DepthBufferBit);
-
-                currentNode = _renderList.First;
-                PickingInfo currentPickingInfo = null;
-                while (currentNode != null)
-                {
-                    var command = currentNode.Value;
-                    var pickingInfo = command.RenderForPicking(_renderInfo, _requestPicking.ScreenX, _requestPicking.ScreenY);
-                    if (pickingInfo != null)
-                    {
-                        currentPickingInfo = pickingInfo;
-                    }
-                    var next = currentNode.Next;
-                    if (command.SelfDestruct)
-                    {
-                        _renderList.Remove(currentNode);
-                        if (command is IDisposable disposable)
-                        {
-                            disposable.Dispose();
-                        }
-                    }
-                    currentNode = next;
-                }
-                _requestPicking = null;
-
-                if (currentPickingInfo != null)
-                {
-                    var writeTask = Task.Run(async () =>
-                    {
-                        await _renderWindow.EventChannel.Writer.WriteAsync(new PickingFeedback(currentPickingInfo),
-                            _cancellationTokenManager.Token);
-                    });
-                    writeTask.Wait();
-                }
-            }
-
-            // Render content for display
+            // Render content
             GL.Clear(ClearBufferMask.DepthBufferBit);
-
-            currentNode = _renderList.First;
+            GL.ClearBuffer(ClearBuffer.Color, 1, new float[] { 0,0,0,0 });
+            var currentNode = _renderList.First;
             while (currentNode != null)
             {
                 var command = currentNode.Value;
@@ -277,12 +247,55 @@ namespace Trl_3D.OpenTk
                 currentNode = next;                
             }
 
+            // Process picking request
+            if (_requestPicking != null)
+            {
+                var pickingInfo = GetPickingInfo(_renderInfo, _requestPicking.ScreenX, _requestPicking.ScreenY);
+                var writeTask = Task.Run(async () =>
+                {
+                    await _renderWindow.EventChannel.Writer.WriteAsync(new PickingFeedback(pickingInfo),
+                        _cancellationTokenManager.Token);
+                });
+                writeTask.Wait();
+                _requestPicking = null;
+            }
+
             // Blit MRT source to default frame buffer to display it
+            GL.ReadBuffer(ReadBufferMode.ColorAttachment0); // copy main texture
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _mrtFrameBufferId);
             GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _defaultFrameBufferId);
             GL.BlitFramebuffer(0, 0, _renderInfo.Width - 1, _renderInfo.Height - 1,  // source
                 0, 0, _renderInfo.Width - 1, _renderInfo.Height - 1, // destination
                 ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest); 
+        }
+
+        /// <summary>
+        /// Must be called in render loop.
+        /// </summary>
+        private PickingInfo GetPickingInfo(RenderInfo info, int pickLocationX, int pickLocationY)
+        {
+            // Get surface ID
+            byte[] colourAttachment1Dump = new byte[4];
+            int screenYInverted = info.Height - pickLocationY - 1;
+
+            GL.ReadBuffer(ReadBufferMode.ColorAttachment1);
+            GL.ReadPixels(pickLocationX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, colourAttachment1Dump);
+            GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
+
+            // In this case nothing has been hit and we are looking at the clear colour
+            if (colourAttachment1Dump[0] == 0
+                && colourAttachment1Dump[1] == 0
+                && colourAttachment1Dump[2] == 0
+                && colourAttachment1Dump[3] == 0)
+            {
+                return new PickingInfo(null, info.TotalRenderTime, pickLocationX, pickLocationY, null);
+            }
+
+            float[] zValue = new float[1];
+            GL.ReadPixels(pickLocationX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
+
+            ulong surfaceIdOut = ((ulong)colourAttachment1Dump[0] * 256 * 256) + ((ulong)colourAttachment1Dump[1] * 256) + (ulong)colourAttachment1Dump[2];
+            return new PickingInfo(surfaceIdOut, info.TotalRenderTime, pickLocationX, pickLocationY, zValue[0]);
         }
 
         public void ReleaseResources()
@@ -308,7 +321,7 @@ namespace Trl_3D.OpenTk
 
             // Dispose MRT frame buffer
             GL.DeleteFramebuffer(_mrtFrameBufferId);
-            GL.DeleteTexture(_mrtFrameBufferTextureId);
+            GL.DeleteTexture(_mrtFrameBufferMainTextureId);
             GL.DeleteRenderbuffer(_mrtFrameBufferDepthId);
 
             _logger.LogInformation("Render commands disposed");

@@ -6,7 +6,6 @@ namespace Trl_3D.OpenTk.GeometryBuffers
     {
         public void SetState(bool isReload);
         public void Render(RenderInfo info);
-        public PickingInfo RenderForPicking(RenderInfo info, int screenX, int screenY);
         public void Reload();
     }
 }

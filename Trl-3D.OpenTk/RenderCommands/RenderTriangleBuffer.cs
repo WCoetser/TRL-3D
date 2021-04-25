@@ -30,11 +30,6 @@ namespace Trl_3D.OpenTk.RenderCommands
         {
             _triangleBuffer.Dispose();
         }
-
-        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
-        {
-            return _triangleBuffer.RenderForPicking(renderInfo, screenX, screenY);
-        }
     }
 }
 

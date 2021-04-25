@@ -29,7 +29,7 @@ namespace Trl_3D.OpenTk.RenderCommands
         public void Render(RenderInfo renderInfo)
         {
             byte[] backBufferDump = new byte[renderInfo.Width * renderInfo.Height * 3];
-            GL.ReadBuffer(ReadBufferMode.Back);
+            GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
             GL.ReadPixels(0, 0, renderInfo.Width, renderInfo.Height, PixelFormat.Rgb, PixelType.UnsignedByte, backBufferDump);
 
             var screenCaptureEvent = new ScreenCaptureEvent(backBufferDump, renderInfo.Width, renderInfo.Height);
@@ -39,12 +39,7 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         public void SetState(RenderInfo renderInfo)
         {
-            // nothiong to do here
-        }
-
-        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
-        {
-            return null;
+            // nothing to do here
         }
     }
 }

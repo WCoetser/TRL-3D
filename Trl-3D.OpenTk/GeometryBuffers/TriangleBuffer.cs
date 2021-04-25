@@ -12,7 +12,6 @@ using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
 using System.IO;
-using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
 {
@@ -192,7 +191,6 @@ namespace Trl_3D.OpenTk.GeometryBuffers
                 GL.BufferData(BufferTarget.ArrayBuffer, _vertexBuffer.Value.Length * sizeof(float), _vertexBuffer.Value, BufferUsageHint.DynamicCopy);
                 _vertexBufferObject = buffers[0];
 
-
                 // Vertex ID
                 const int layout_pos_vertexId = 0;
                 GL.EnableVertexArrayAttrib(_vertexArrayObject, layout_pos_vertexId);
@@ -238,17 +236,11 @@ namespace Trl_3D.OpenTk.GeometryBuffers
 
         public void Render(RenderInfo info)
         {
-            Render(info, false);
-        }
-
-        public void Render(RenderInfo info, bool isInPickingMode)
-        {
             _shaderProgram.UseProgram();
 
             // Set camera location and projection
             _shaderProgram.SetUniform("viewMatrix", info.CurrentViewMatrix);
             _shaderProgram.SetUniform("projectionMatrix", info.CurrentProjectionMatrix);
-            _shaderProgram.SetUniform("isInPickingMode", isInPickingMode);
 
             // TODO: Remove ToArray()
             GL.BindTextures(0, _renderTextures.Count, _renderTextures.Select(tex => tex.OpenGLTextureId).ToArray());
@@ -283,37 +275,6 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             using var inputStream = GetType().Assembly.GetManifestResourceStream("Trl_3D.OpenTk.GeometryBuffers.triangle_buffer_shader.vert");
             using var reader = new StreamReader(inputStream);
             return reader.ReadToEnd();            
-        }
-
-        /// <summary>
-        /// Must be called in render loop.
-        /// </summary>
-        public PickingInfo RenderForPicking(RenderInfo info, int screenX, int screenY)
-        {
-            // Render with picking mode so that surface IDs are generated as colours
-            Render(info, true);
-
-            GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
-
-            // Get surface ID
-            byte[] colourAttachment1Dump = new byte[4];
-            int screenYInverted = info.Height - screenY - 1;
-            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.Rgba, PixelType.UnsignedByte, colourAttachment1Dump);
-
-            // In this case nothing has been hit and we are looking at the clear colour
-            if (colourAttachment1Dump[0] == 0
-                && colourAttachment1Dump[1] == 0
-                && colourAttachment1Dump[2] == 0
-                && colourAttachment1Dump[3] == 0)
-            {
-                return new PickingInfo(null, info.TotalRenderTime, screenX, screenY, null);
-            }
-
-            float[] zValue = new float[1];
-            GL.ReadPixels(screenX, screenYInverted, 1, 1, PixelFormat.DepthComponent, PixelType.Float, zValue);
-                        
-            ulong surfaceIdOut = ((ulong)colourAttachment1Dump[0] * 256 * 256) + ((ulong)colourAttachment1Dump[1] * 256) + (ulong)colourAttachment1Dump[2];
-            return new PickingInfo(surfaceIdOut, info.TotalRenderTime, screenX, screenY, zValue[0]);
         }
 
         public void Reload()

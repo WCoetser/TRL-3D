@@ -25,11 +25,6 @@ namespace Trl_3D.OpenTk.RenderCommands
             // Main logic in render loop
         }
 
-        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
-        {
-            return null;
-        }
-
         public void SetState(RenderInfo renderInfo)
         {
         }

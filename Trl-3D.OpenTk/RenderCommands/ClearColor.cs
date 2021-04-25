@@ -20,19 +20,11 @@ namespace Trl_3D.OpenTk.RenderCommands
 
         public void Render(RenderInfo renderInfo)
         {
-            GL.ClearColor(_clearColor.Red, _clearColor.Green, _clearColor.Blue, 1.0f);
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.ClearBuffer(ClearBuffer.Color, 0, new float[] { _clearColor.Red, _clearColor.Green, _clearColor.Blue, 1.0f });
         }
 
         public void SetState(RenderInfo renderInfo)
         {
-        }
-
-        public PickingInfo RenderForPicking(RenderInfo renderInfo, int screenX, int screenY)
-        {
-            GL.ClearColor(0, 0, 0, 0);
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-            return null;
         }
     }
 }
