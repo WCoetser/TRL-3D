@@ -27,6 +27,12 @@ namespace Trl_3D.OpenTk.Shaders
             GL.Uniform1(samplerArrayLocation, values.Length, values);
         }
 
+        public void SetUniform(string name, float value)
+        {
+            var samplerArrayLocation = GL.GetUniformLocation(ProgramId, name);
+            GL.Uniform1(samplerArrayLocation, value);
+        }
+
         public void SetUniform(string name, bool value)
         {
             var boolLocation = GL.GetUniformLocation(ProgramId, name);

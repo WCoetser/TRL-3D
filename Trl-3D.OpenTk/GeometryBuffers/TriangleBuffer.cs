@@ -12,6 +12,7 @@ using Trl_3D.Core.Assertions;
 using Trl.IntegerMapper;
 using System.Linq;
 using System.IO;
+using OpenTK.Mathematics;
 
 namespace Trl_3D.OpenTk.GeometryBuffers
 {
@@ -241,6 +242,9 @@ namespace Trl_3D.OpenTk.GeometryBuffers
             // Set camera location and projection
             _shaderProgram.SetUniform("viewMatrix", info.CurrentViewMatrix);
             _shaderProgram.SetUniform("projectionMatrix", info.CurrentProjectionMatrix);
+            _shaderProgram.SetUniform("inverseProjectViewMatrix", Matrix4.Invert(info.CurrentViewMatrix * info.CurrentProjectionMatrix));
+            _shaderProgram.SetUniform("windowWidth", info.Width);
+            _shaderProgram.SetUniform("windowHeight", info.Height);
 
             // TODO: Remove ToArray()
             GL.BindTextures(0, _renderTextures.Count, _renderTextures.Select(tex => tex.OpenGLTextureId).ToArray());
