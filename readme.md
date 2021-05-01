@@ -80,13 +80,15 @@ These features are currently implemented:
 * Multiple textures
 * Perspective projection, moving the camera
 * Screenshots
-* Picking object at screen coordinate and returning its ID
+* Picking object at screen coordinate and returning its ID, convert window coordinates to world coordinates.
 * Events (keyboard/mouse/picking/screenshot) and assertion loading logic
 * Support for partially specified object models in seperate batches
 
 # Licences
 
 This project is released under the MIT license, see [licence.txt](license.txt).
+
+Important: I am not an expert if 3D programming, most of the code is based on other code and tutorials that I gathered from the internet.
 
 For the sample project (Trl-3D.SampleApp), the following additional libraries were referenced that has different open source licences (as of time of writing):
 
