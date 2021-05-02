@@ -26,12 +26,10 @@ void main()
     }
 
     // Reference: https://www.khronos.org/opengl/wiki/Compute_eye_space_from_window_space
-
-    vec4 viewport = vec4(0, 0, windowWidth, windowHeight);
-    vec4 ndcPos;
-    ndcPos.xy = ((2.0 * gl_FragCoord.xy) - (2.0 * viewport.xy)) / (viewport.zw) - 1;
-    ndcPos.z = (2.0 * gl_FragCoord.z - gl_DepthRange.near - gl_DepthRange.far) /
-        (gl_DepthRange.far - gl_DepthRange.near);
+    vec4 ndcPos;    
+    ndcPos.x = 2.0 * gl_FragCoord.x / windowWidth - 1;
+    ndcPos.y = 2.0 * gl_FragCoord.y / windowHeight - 1;
+    ndcPos.z = 2.0 * gl_FragCoord.z - 1.0;
     ndcPos.w = 1.0;
 
     // ndc -> clip coordinates
