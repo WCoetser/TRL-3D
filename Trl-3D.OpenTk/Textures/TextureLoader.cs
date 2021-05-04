@@ -49,9 +49,8 @@ namespace Trl_3D.OpenTk.Textures
 
         public void Dispose()
         {
-            // TODO: Fix transient "Attempted to read or write protected memory" error
-            //var deleteList = _knownTextures.Values.Select(t => t.OpenGLTextureId).ToArray();
-            //GL.DeleteTextures(deleteList.Length, deleteList);
+            var deleteList = _knownTextures.Values.Select(t => t.OpenGLTextureId).ToArray();
+            GL.DeleteTextures(deleteList.Length, deleteList);
         }
     }
 }

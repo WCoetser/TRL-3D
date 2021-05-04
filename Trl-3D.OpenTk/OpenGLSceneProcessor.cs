@@ -18,6 +18,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Trl_3D.OpenTk
 {
@@ -66,6 +67,8 @@ namespace Trl_3D.OpenTk
             _renderInfo = new RenderInfo();
             _requestPicking = null;
 
+            GL.LoadBindings(new GLFWBindingsContext());
+
             // Get human readable log messages during debugging
             if (Debugger.IsAttached)
             {
@@ -86,6 +89,12 @@ namespace Trl_3D.OpenTk
 
         private void InitFrameBuffer(int width, int height)
         {
+            // This happens when minimising the window
+            if (width == 0 || height == 0)
+            {
+                return;
+            }
+
             // Generate extra frame buffer for main rendering, to be blitted to default frame buffer
             _mrtFrameBufferId = GL.GenFramebuffer();
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, _mrtFrameBufferId);

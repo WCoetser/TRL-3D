@@ -27,7 +27,7 @@ namespace Trl_3D.OpenTk
         private object _updateFrameLock = new object();
         private object _renderFrameLock = new object();
         private object _resizeWindowLock = new object();
-        private bool _shutdownInProgress = false;
+        private bool _shutdownComplete = false;
 
         public RenderWindow(GameWindowSettings gameWindowSettings, 
                             NativeWindowSettings nativeWindowSettings)
@@ -47,11 +47,6 @@ namespace Trl_3D.OpenTk
             // Use seperate locks for update and render to avoid stuttering
             lock (_updateFrameLock)
             {
-                if (_shutdownInProgress)
-                {
-                    return;
-                }
-
                 var userEvent = new UserInputStateEvent(KeyboardState.GetSnapshot(), MouseState.GetSnapshot(), obj.Time);
                 var task = Task.Run(async () =>
                 {
@@ -66,11 +61,6 @@ namespace Trl_3D.OpenTk
             // Use seperate locks for update and render to avoid stuttering
             lock (_renderFrameLock)
             {
-                if (_shutdownInProgress)
-                {
-                    return;
-                }
-
                 // This should only update the OpenGL state when there are inputs in the scene graph update channel
                 while (RenderCommandUpdatesChannel.Reader.TryRead(out IRenderCommand renderCommand))
                 {
@@ -119,16 +109,11 @@ namespace Trl_3D.OpenTk
                 {
                     lock (_renderFrameLock)             
                     {
-                        if (_shutdownInProgress)
-                        {
-                            return;
-                        }
-
-                        _shutdownInProgress = true;
                         _logger.LogInformation("RenderWindow release resources started");
                         _openGLSceneProcessor.ReleaseResources();
                         _logger.LogInformation("RenderWindow release resources ended");
 
+                        _shutdownComplete = true;
                     }
                 }
             }
@@ -136,10 +121,13 @@ namespace Trl_3D.OpenTk
 
         protected override void Dispose(bool disposing)
         {
-            // This should not be needed if window is closed normally
-            ReleaseResources();
+            if (disposing && !_shutdownComplete)
+            {
+                // This should not be needed if window is closed normally
+                ReleaseResources();
 
-            base.Dispose(disposing);
+                base.Dispose(disposing);
+            }
         }
     }
 }
